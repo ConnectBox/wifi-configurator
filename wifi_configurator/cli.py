@@ -55,8 +55,8 @@ def get_current_ac_mode(config):
 @click.option('-c', '--channel',
               help="Set a new channel for the access point")
 @click.option('-o', '--output',
-             help="Destination for updated configuration file. "
-                  "Defaults to filename. - writes to stdout")
+              help="Destination for updated configuration file. "
+                   "Defaults to filename. - writes to stdout")
 def main(filename, interface, ssid, channel, output):
     """Console script for wifi_configurator."""
     if filename == "-":
@@ -64,7 +64,6 @@ def main(filename, interface, ssid, channel, output):
     config = hostapd_conf_as_config(filename)
     # Could use a callback and access filename parameter in the decorator,
     #  (filename possibly needs is_eager) or by subclassing click.Option
-    #  (https://old.reddit.com/r/learnpython/comments/ah61cj/how_to_set_pythonclick_options_that_reference/eebxfah/) but let's get started
     if not ssid:
         ssid = get_current_ssid(config)
     if not channel:
