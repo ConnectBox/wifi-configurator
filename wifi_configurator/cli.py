@@ -3,6 +3,7 @@
 """Console script for wifi_configurator."""
 import functools
 import os
+import subprocess
 import sys
 
 import click
@@ -57,7 +58,10 @@ def get_current_ac_mode(config):
 @click.option('-o', '--output',
               help="Destination for updated configuration file. "
                    "Defaults to filename. - writes to stdout")
-def main(filename, interface, ssid, channel, output):
+@click.option('--sync/--no-sync',
+              default=True,
+              help="Performs a filesystem sync after writing changes")
+def main(filename, interface, ssid, channel, output, sync):
     """Console script for wifi_configurator."""
     if filename == "-":
         filename = sys.stdin
@@ -90,6 +94,12 @@ def main(filename, interface, ssid, channel, output):
         ac_mode=ac_mode,
     )
     rendered.dump(output)
+    # Some filesystems don't write to disk for a while, which can lead to
+    #  corruption in files. A corrupt hostapd.conf may well brick a device
+    #  in the field so let's avoid that risk.
+    # Related: https://github.com/ConnectBox/connectbox-pi/issues/220
+    if sync and output != sys.stdout:
+        subprocess.run("/bin/sync")
     return 0
 
 
