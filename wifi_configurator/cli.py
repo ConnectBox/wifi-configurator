@@ -42,6 +42,21 @@ def get_current_country_code(config):
 def get_current_ac_mode(config):
     return config.get("ieee80211ac", "0")
 
+def get_current_wpa_passphrase(config):
+    # If it's not set, then pass back an empty string and we can follow
+    #  the logic as if we're turning off password protection
+    return config.get("wpa_passphrase", "")
+
+def validate_wpa_passphrase(ctx, param, value):
+    # An empty passphrase disables password auth
+    if not value:
+        return value
+
+    # Otherwise, valid WPA passphrases are between 8 and 63 chars inclusive
+    if 8 <= len(value) <= 63:
+        return value
+
+    raise click.BadParameter('Passphrase must be 8-63 characters long or empty')
 
 @click.command()
 @click.option('-f', '--filename',
@@ -51,17 +66,23 @@ def get_current_ac_mode(config):
 @click.option('-i', '--interface',
               default="wlan0",
               help="Wifi interface name. Defaults to wlan0")
+# Add length check (32 octets)
 @click.option('-s', '--ssid',
               help="Set a new ssid for the access point")
+# Add validation (possibly even taking region into account)
 @click.option('-c', '--channel',
               help="Set a new channel for the access point")
 @click.option('-o', '--output',
               help="Destination for updated configuration file. "
                    "Defaults to filename. - writes to stdout")
+@click.option('-p', '--wpa-passphrase',
+              callback=validate_wpa_passphrase,
+              help="Access point passphrase (8-63 characters long). "
+                   "Empty passphrase makes the access point open")
 @click.option('--sync/--no-sync',
               default=True,
               help="Performs a filesystem sync after writing changes")
-def main(filename, interface, ssid, channel, output, sync):
+def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
     """Console script for wifi_configurator."""
     if filename == "-":
         filename = sys.stdin
@@ -76,13 +97,22 @@ def main(filename, interface, ssid, channel, output, sync):
         output = filename
     if output == "-":
         output = sys.stdout
+    # We can't do a basic equality check here, because an empty string is
+    #  used to disable password protection, and that's different to not
+    #  specifying a wpa_passphrase (which is None when it's unset)
+    if wpa_passphrase is None:
+        wpa_passphrase = get_current_wpa_passphrase(config)
 
     ht_capab = get_current_ht_capab(config)
     ac_mode = get_current_ac_mode(config)
     country_code = get_current_country_code(config)
 
     file_loader = jinja2.PackageLoader('wifi_configurator', 'templates')
-    env = jinja2.Environment(loader=file_loader)
+    env = jinja2.Environment(
+        loader=file_loader,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
     template = env.get_template('hostapd.conf.j2')
 
     rendered = template.stream(
@@ -92,6 +122,7 @@ def main(filename, interface, ssid, channel, output, sync):
         country_code=country_code,
         ht_capab=ht_capab,
         ac_mode=ac_mode,
+        wpa_passphrase=wpa_passphrase,
     )
     rendered.dump(output)
     # Some filesystems don't write to disk for a while, which can lead to
