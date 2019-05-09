@@ -36,9 +36,11 @@ auth_algs=3
 ignore_broadcast_ssid=0
 wmm_enabled=1  # QOS
 
-ht_capab={{ ht_capab }}
-vht_capab=
-ieee80211ac={{ ac_mode }}
+ht_capab={{ wifi_adapter.ht_capab }}
+{% if wifi_adapter.ac_mode %}
+vht_capab={{ wifi_adapter.vht_capab }}
+ieee80211ac={{ wifi_adapter.ac_mode }}
+{% endif %}
 
 {# Can't have an empty wpa_passphrase i.e. empty != unset #}
 {# Do we really want WPA and WPA2? i.e. wpa=3 #}
