@@ -20,7 +20,7 @@ DEFAULT_CHANNEL = "7"
 
 @functools.lru_cache()
 def hostapd_conf_as_config(filename):
-    if os.path.exists(filename):
+    if filename == sys.stdin or os.path.exists(filename):
         return configobj.ConfigObj(filename)
     click.echo("Warning: unable to load specific config file: %s" %
                (filename,))
@@ -68,6 +68,9 @@ def cb_handle_filename(ctx, param, value):
 
 def cb_handle_output(ctx, param, value):
     if not value:
+        if ctx.params["filename"] == sys.stdin:
+            return sys.stdout
+
         return ctx.params["filename"]
 
     # If we read the config on stdin, we need a diff place to write the output
