@@ -50,8 +50,16 @@ def get_current_wpa_passphrase(config):
     return config.get("wpa_passphrase", "")
 
 def cb_handle_wpa_passphrase(ctx, param, value):
-    # An empty passphrase disables password auth
-    if not value:
+    # IF the passphrase is None, re-use whatever is already in config
+    # We can't do a basic equality check here, because an empty string is
+    #  used to disable password protection, and that's different to not
+    #  specifying a wpa_passphrase (which is None when it's unset)
+    if value is None:
+        config = hostapd_conf_as_config(ctx.params["filename"])
+        return get_current_wpa_passphrase(config)
+
+    # An empty passphrase disables password auth so it's valid
+    if value == "":
         return value
 
     # Otherwise, valid WPA passphrases are between 8 and 63 chars inclusive
@@ -118,11 +126,6 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
         ssid = get_current_ssid(config)
     if not channel:
         channel = get_current_channel(config)
-    # We can't do a basic equality check here, because an empty string is
-    #  used to disable password protection, and that's different to not
-    #  specifying a wpa_passphrase (which is None when it's unset)
-    if wpa_passphrase is None:
-        wpa_passphrase = get_current_wpa_passphrase(config)
 
     wifi_adapter = adapters.factory(interface)
     country_code = get_current_country_code(config)

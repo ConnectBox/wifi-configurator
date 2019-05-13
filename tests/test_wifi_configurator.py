@@ -6,9 +6,14 @@
 
 import unittest
 from click.testing import CliRunner
+import click
 
-#from wifi_configurator import wifi_configurator
 from wifi_configurator import cli
+
+
+class MockCtx:  # pylint: disable=too-few-public-methods
+    def __init__(self, filename):
+        self.params = {"filename": filename}
 
 
 class TestWifi_configurator(unittest.TestCase):
@@ -58,3 +63,23 @@ class TestWifi_configurator(unittest.TestCase):
     @unittest.skip("Change filename to be an argument. Then handle missing file")
     def test_missing_filename_file(self):
         pass
+
+
+    def test_wpa_passphrase_callback(self):
+        ctx = MockCtx("junk.conf")
+        wpa = cli.cb_handle_wpa_passphrase(ctx, "wpa_passphrase", None)
+        # Default wpa_passphrase
+        self.assertEqual(wpa, "")
+        # use a fixture, luke...
+        wpa = cli.cb_handle_wpa_passphrase(ctx, "wpa_passphrase", "")
+        # Unset what was previously set
+        self.assertEqual(wpa, "")
+        wpa = cli.cb_handle_wpa_passphrase(ctx, "wpa_passphrase", "hellokit")
+        # Unset what was previously set
+        self.assertEqual(wpa, "hellokit")
+        # Yell if the passphrase is too short
+        self.assertRaises(
+            click.BadParameter,
+            cli.cb_handle_wpa_passphrase,
+            ctx, "wpa_passphrase", "short"
+        )
