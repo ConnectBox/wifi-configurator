@@ -10,6 +10,8 @@ import click
 import configobj
 import jinja2
 
+from . import adapters
+
 
 SYSLOG_TAG = "wifi-configurator"
 DEFAULT_SSID = "ConnectBox - Free Media"
@@ -18,7 +20,7 @@ DEFAULT_CHANNEL = "7"
 
 @functools.lru_cache()
 def hostapd_conf_as_config(filename):
-    if os.path.exists(filename):
+    if filename == sys.stdin or os.path.exists(filename):
         return configobj.ConfigObj(filename)
     click.echo("Warning: unable to load specific config file: %s" %
                (filename,))
@@ -47,9 +49,17 @@ def get_current_wpa_passphrase(config):
     #  the logic as if we're turning off password protection
     return config.get("wpa_passphrase", "")
 
-def validate_wpa_passphrase(ctx, param, value):
-    # An empty passphrase disables password auth
-    if not value:
+def cb_handle_wpa_passphrase(ctx, param, value):
+    # IF the passphrase is None, re-use whatever is already in config
+    # We can't do a basic equality check here, because an empty string is
+    #  used to disable password protection, and that's different to not
+    #  specifying a wpa_passphrase (which is None when it's unset)
+    if value is None:
+        config = hostapd_conf_as_config(ctx.params["filename"])
+        return get_current_wpa_passphrase(config)
+
+    # An empty passphrase disables password auth so it's valid
+    if value == "":
         return value
 
     # Otherwise, valid WPA passphrases are between 8 and 63 chars inclusive
@@ -58,9 +68,33 @@ def validate_wpa_passphrase(ctx, param, value):
 
     raise click.BadParameter('Passphrase must be 8-63 characters long or empty')
 
+def cb_handle_filename(ctx, param, value):
+    if value == "-":
+        return sys.stdin
+
+    return value
+
+def cb_handle_output(ctx, param, value):
+    if not value:
+        if ctx.params["filename"] == sys.stdin:
+            return sys.stdout
+
+        return ctx.params["filename"]
+
+    # If we read the config on stdin, we need a diff place to write the output
+    if value == "-":
+        return sys.stdout
+
+    return value
+
+
 @click.command()
+# This must be an eager option because other options reference it in their
+#  callbacks
 @click.option('-f', '--filename',
+              callback=cb_handle_filename,
               default="/etc/hostapd/hostapd.conf",
+              is_eager=True,
               help="Input file to be used for values not being updated. "
                    "Defaults to /etc/hostapd/hostapd.conf")
 @click.option('-i', '--interface',
@@ -73,10 +107,11 @@ def validate_wpa_passphrase(ctx, param, value):
 @click.option('-c', '--channel',
               help="Set a new channel for the access point")
 @click.option('-o', '--output',
+              callback=cb_handle_output,
               help="Destination for updated configuration file. "
                    "Defaults to filename. - writes to stdout")
 @click.option('-p', '--wpa-passphrase',
-              callback=validate_wpa_passphrase,
+              callback=cb_handle_wpa_passphrase,
               help="Access point passphrase (8-63 characters long). "
                    "Empty passphrase makes the access point open")
 @click.option('--sync/--no-sync',
@@ -84,8 +119,6 @@ def validate_wpa_passphrase(ctx, param, value):
               help="Performs a filesystem sync after writing changes")
 def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
     """Console script for wifi_configurator."""
-    if filename == "-":
-        filename = sys.stdin
     config = hostapd_conf_as_config(filename)
     # Could use a callback and access filename parameter in the decorator,
     #  (filename possibly needs is_eager) or by subclassing click.Option
@@ -93,18 +126,8 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
         ssid = get_current_ssid(config)
     if not channel:
         channel = get_current_channel(config)
-    if not output:
-        output = filename
-    if output == "-":
-        output = sys.stdout
-    # We can't do a basic equality check here, because an empty string is
-    #  used to disable password protection, and that's different to not
-    #  specifying a wpa_passphrase (which is None when it's unset)
-    if wpa_passphrase is None:
-        wpa_passphrase = get_current_wpa_passphrase(config)
 
-    ht_capab = get_current_ht_capab(config)
-    ac_mode = get_current_ac_mode(config)
+    wifi_adapter = adapters.factory(interface)
     country_code = get_current_country_code(config)
 
     file_loader = jinja2.PackageLoader('wifi_configurator', 'templates')
@@ -120,8 +143,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
         ssid=ssid,
         channel=channel,
         country_code=country_code,
-        ht_capab=ht_capab,
-        ac_mode=ac_mode,
+        wifi_adapter=wifi_adapter,
         wpa_passphrase=wpa_passphrase,
     )
     rendered.dump(output)
