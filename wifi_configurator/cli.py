@@ -118,7 +118,7 @@ def cb_handle_output(ctx, param, value):
                    "Empty passphrase makes the access point open")
 @click.option('--set-country-code',
               is_flag=True,
-              help="Does a best-effort attempt to infer the local country "
+              help="Do a best-effort attempt to infer the local country "
                    "code by sniffing for other APs")
 @click.option('--sync/--no-sync',
               default=True,
