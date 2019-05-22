@@ -9,8 +9,10 @@ import sys
 import click
 import configobj
 import jinja2
+import pyric
 
 from . import adapters
+from . import scan
 
 
 SYSLOG_TAG = "wifi-configurator"
@@ -114,10 +116,16 @@ def cb_handle_output(ctx, param, value):
               callback=cb_handle_wpa_passphrase,
               help="Access point passphrase (8-63 characters long). "
                    "Empty passphrase makes the access point open")
+@click.option('--set-country-code',
+              is_flag=True,
+              help="Does a best-effort attempt to infer the local country "
+                   "code by sniffing for other APs")
 @click.option('--sync/--no-sync',
               default=True,
               help="Performs a filesystem sync after writing changes")
-def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
+# pylint: disable=too-many-arguments,too-many-locals
+def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
+         set_country_code):
     """Console script for wifi_configurator."""
     config = hostapd_conf_as_config(filename)
     # Could use a callback and access filename parameter in the decorator,
@@ -128,7 +136,25 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
         channel = get_current_channel(config)
 
     wifi_adapter = adapters.factory(interface)
-    country_code = get_current_country_code(config)
+    if set_country_code:
+        # We deliberately instantiate this only for set_country_code because
+        #  pyw gets sad if operations are attempted on a device that does not
+        #  support nl80211
+        try:
+            if pyric.pyw.iswireless(interface):
+                wlan_if = pyric.pyw.getcard(interface)
+                country_code = scan.detect_regdomain(wlan_if)
+            else:
+                click.echo("Interface %s is not a wifi interface. Using "
+                           "previous country code" % (interface,))
+                country_code = get_current_country_code(config)
+        except pyric.error:
+            # Can't detect the regdomain. Fallback to existing
+            click.echo("Unable to query interface %s with pyw. Using "
+                       "previous country code" % (interface,))
+            country_code = get_current_country_code(config)
+    else:
+        country_code = get_current_country_code(config)
 
     file_loader = jinja2.PackageLoader('wifi_configurator', 'templates')
     env = jinja2.Environment(
@@ -137,7 +163,6 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync):
         lstrip_blocks=True,
     )
     template = env.get_template('hostapd.conf.j2')
-
     rendered = template.stream(
         interface=interface,
         ssid=ssid,

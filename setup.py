@@ -13,7 +13,8 @@ with open('HISTORY.rst') as history_file:
 
 requirements = ['Click>=6.0',
                 'ConfigObj',
-                'jinja2']
+                'jinja2',
+                'pyric']
 
 setup_requirements = [ ]
 

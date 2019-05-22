@@ -1,0 +1,62 @@
+BSS ea:d8:ab:0d:39:e8(on wlan0)
+        TSF: 179356064 usec (0d, 00:02:59)
+        freq: 2412
+        beacon interval: 100 TUs
+        capability: ESS Privacy ShortPreamble ShortSlotTime (0x0431)
+        signal: -48.00 dBm
+        last seen: 0 ms ago
+        SSID: one
+        Supported rates: 1.0* 2.0* 5.5* 11.0* 6.0 9.0 12.0 18.0
+        DS Parameter set: channel 1
+        ERP: <no flags>
+        HT capabilities:
+                Capabilities: 0x106e
+                        HT20/HT40
+                        SM Power Save disabled
+                        RX HT20 SGI
+                        RX HT40 SGI
+                        No RX STBC
+                        Max AMSDU length: 3839 bytes
+                        DSSS/CCK HT40
+                Maximum RX AMPDU length 65535 bytes (exponent: 0x003)
+                Minimum RX AMPDU time spacing: No restriction (0x00)
+                HT RX MCS rate indexes supported: 0-15
+                HT TX MCS rate indexes are undefined
+        RSN:     * Version: 1
+                 * Group cipher: CCMP
+                 * Pairwise ciphers: CCMP
+                 * Authentication suites: PSK
+                 * Capabilities: 1-PTKSA-RC 1-GTKSA-RC (0x0000)
+        Extended supported rates: 24.0 36.0 48.0 54.0
+        HT operation:
+                 * primary channel: 1
+                 * secondary channel offset: above
+                 * STA channel width: any
+                 * RIFS: 0
+                 * HT protection: no
+                 * non-GF present: 0
+                 * OBSS non-GF present: 0
+                 * dual beacon: 0
+                 * dual CTS protection: 0
+                 * STBC beacon: 0
+                 * L-SIG TXOP Prot: 0
+                 * PCO active: 0
+                 * PCO phase: 0
+        WMM:     * Parameter version 1
+                 * u-APSD
+                 * BE: CW 15-1023, AIFSN 3
+                 * BK: CW 15-1023, AIFSN 7
+                 * VI: CW 7-15, AIFSN 2, TXOP 3008 usec
+                 * VO: CW 3-7, AIFSN 2, TXOP 1504 usec
+        WPS:     * Version: 1.0
+                 * Wi-Fi Protected Setup State: 2 (Configured)
+                 * Response Type: 3 (AP)
+                 * UUID: 00000000-0000-0000-0000-e48d8c19906c
+                 * Manufacturer: Mikrotik
+                 * Model: RB2011UiAS-2HnD
+                 * Model Number: 0
+                 * Serial Number: 608C053E8FEE
+                 * Primary Device Type: 6-0050f204-1
+                 * Device name: MikroTik
+                 * Config methods: PBC
+                 * RF Bands: 0x1
