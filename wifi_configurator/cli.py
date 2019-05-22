@@ -10,6 +10,7 @@ import click
 import configobj
 import jinja2
 import pyric
+import pyric.pyw as pyw
 
 from . import adapters
 from . import scan
@@ -141,8 +142,8 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         #  pyw gets sad if operations are attempted on a device that does not
         #  support nl80211
         try:
-            if pyric.pyw.iswireless(interface):
-                wlan_if = pyric.pyw.getcard(interface)
+            if pyw.iswireless(interface):
+                wlan_if = pyw.getcard(interface)
                 country_code = scan.detect_regdomain(wlan_if)
             else:
                 click.echo("Interface %s is not a wifi interface. Using "
