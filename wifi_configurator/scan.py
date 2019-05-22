@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import re
 import configobj
+import pyric.pyw as pyw
 
 
 class ActiveWifiInterface:
@@ -13,9 +14,9 @@ class ActiveWifiInterface:
 
     def __init__(self, wlan_if):
         self.wlan_if = wlan_if
-        if self.wlan_if.isup():
+        if pyw.isup(self.wlan_if):
             self.initial_state = self.STATE_ACTIVE
-        elif self.wlan_if.isdown():
+        elif pyw.isdown(self.wlan_if):
             self.initial_state = self.STATE_INACTIVE
         else:
             # Unclear how we'd get here, but whatevs
@@ -24,8 +25,8 @@ class ActiveWifiInterface:
     def __enter__(self):
         # Can only bring up the device if it's inactive - can't do anything
         # about those in an unknown state
-        if self.wlan_if.isdown():
-            self.wlan_if.up()
+        if pyw.isdown(self.wlan_if):
+            pyw.up(self.wlan_if)
             return True
 
         # Good to go if it's already active, but not otherwise
@@ -34,7 +35,7 @@ class ActiveWifiInterface:
     def __exit__(self, *args):
         # Leave things the way you found them, like your parents said
         if self.initial_state == self.STATE_INACTIVE:
-            self.wlan_if.down()
+            pyw.down(self.wlan_if)
 
 
 def get_country_count_from_iw_output(iw_output):
