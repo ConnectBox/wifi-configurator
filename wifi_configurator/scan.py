@@ -10,22 +10,16 @@ class ActiveWifiInterface:
 
     STATE_ACTIVE = "up"
     STATE_INACTIVE = "down"
-    STATE_UNKNOWN = "unknown"
 
     def __init__(self, wlan_if):
         self.wlan_if = wlan_if
         if pyw.isup(self.wlan_if):
             self.initial_state = self.STATE_ACTIVE
-        elif pyw.isdown(self.wlan_if):
-            self.initial_state = self.STATE_INACTIVE
         else:
-            # Unclear how we'd get here, but whatevs
-            self.initial_state = self.STATE_UNKNOWN
+            self.initial_state = self.STATE_INACTIVE
 
     def __enter__(self):
-        # Can only bring up the device if it's inactive - can't do anything
-        # about those in an unknown state
-        if pyw.isdown(self.wlan_if):
+        if not pyw.isup(self.wlan_if):
             pyw.up(self.wlan_if)
             return True
 
