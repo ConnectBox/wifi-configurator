@@ -73,4 +73,4 @@ def detect_regdomain(wlan_if):
             wlan_if.dev,
             "scan"
         ], stdout=subprocess.PIPE)
-        return get_consensus_regdomain_from_iw_output(iw.stdout)
+        return get_consensus_regdomain_from_iw_output(iw.stdout.decode('utf-8'))
