@@ -137,6 +137,8 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         channel = get_current_channel(config)
 
     wifi_adapter = adapters.factory(interface)
+    # Retrieve the previous cc now, given we have so many fallback cases
+    country_code = get_current_country_code(config)
     if set_country_code:
         # We deliberately instantiate this only for set_country_code because
         #  pyw gets sad if operations are attempted on a device that does not
@@ -144,18 +146,17 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         try:
             if pyw.iswireless(interface):
                 wlan_if = pyw.getcard(interface)
-                country_code = scan.detect_regdomain(wlan_if)
+                scanned_cc = scan.detect_regdomain(wlan_if)
+                # Only use the scanned cc if it's non-empty
+                if scanned_cc:
+                    country_code = scanned_cc
             else:
                 click.echo("Interface %s is not a wifi interface. Using "
                            "previous country code" % (interface,))
-                country_code = get_current_country_code(config)
         except pyric.error:
             # Can't detect the regdomain. Fallback to existing
             click.echo("Unable to query interface %s with pyw. Using "
                        "previous country code" % (interface,))
-            country_code = get_current_country_code(config)
-    else:
-        country_code = get_current_country_code(config)
 
     file_loader = jinja2.PackageLoader('wifi_configurator', 'templates')
     env = jinja2.Environment(
