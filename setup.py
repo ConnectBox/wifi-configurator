@@ -50,6 +50,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ConnectBox/wifi_configurator',
-    version='version='1.1.0'',
+    version='1.1.1',
     zip_safe=False,
 )
