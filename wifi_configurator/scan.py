@@ -4,6 +4,7 @@ import subprocess
 import re
 import configobj
 import pyric.pyw as pyw
+import pyric.utils.channels as channels
 
 
 class ActiveWifiInterface:
@@ -74,3 +75,95 @@ def detect_regdomain(wlan_if):
             "scan"
         ], stdout=subprocess.PIPE)
         return get_consensus_regdomain_from_iw_output(iw.stdout.decode('utf-8'))
+
+def get_country_rules_block(country_code, lines):
+    in_country_block = False
+    country_lines = []
+    for line in lines:
+        if in_country_block:
+            if line.strip():
+                country_lines.append(line)
+            else:
+                # We're at the end of the country block
+                return country_lines
+
+        if not line.startswith("country %s:" % (country_code,)):
+            continue
+
+        in_country_block = True
+        country_lines.append(line)
+
+    return country_lines
+
+def get_frequencies_from_country_block(lines):
+    freqency_blocks = []
+    # Drop the line with the country definition
+    frequency_lines = lines[1:]
+    # example frequency line format
+    # \t(2457.000 - 2482.000 @ 20.000), (20.00), (N/A), NO-IR, AUTO-BW
+    for line in frequency_lines:
+        # We can't use a frequency marked as NO-OFDM, so we must
+        #  drop them. This includes channel 14 in JP and 12+13 in 00
+        if "NO-OFDM" in line:
+            continue
+
+        # Dump leading whitespace,
+        # grab everything to the left of the @
+        # drop the first character (the paranthesis)
+        freq_section = line.strip().split("@")[0][1:]
+        freq_from, freq_to = [
+            float(freq.strip()) for freq in freq_section.split("-")
+        ]
+        freqency_blocks.append((freq_from, freq_to))
+
+    return freqency_blocks
+
+def flatten_frequency_blocks(blocks):
+    # We don't care for the power or band specific rules, so we can
+    #  collapse the frequency ranges. regdb output is always sorted
+    #  by increasing frequency, so we can make some assumptions about
+    #  order as we're flattening
+    flattened_blocks = []
+    block_lower_point = 0
+    block_upper_point = 0
+    for start, end in blocks:
+        if start > block_upper_point:
+            # This block doesn't overlap with the last or extend it
+            #  and isn't our starting point - flush the last block
+            if block_lower_point > 0 and block_upper_point > 0:
+                flattened_blocks.append((block_lower_point, block_upper_point))
+            block_lower_point = start
+            block_upper_point = end
+        else:
+            # This block continues or is completely enclosed in the block
+            #  that we're processing
+            if end > block_upper_point:
+                # We're extending the block
+                block_upper_point = end
+
+    # flush the last oneO
+    flattened_blocks.append((block_lower_point, block_upper_point))
+    return flattened_blocks
+
+
+def get_channel_list_from_frequency_blocks(freq_list):
+    allowed_channels = []
+    # for 2.4GHz
+    width_from_centre = 10
+    for channel, centre_freq in channels.ISM_24_C2F.items():
+        for start, end in freq_list:
+            # i.e. is the channel wholely contained in the block?
+            if start <= centre_freq - width_from_centre and \
+                   centre_freq + width_from_centre <= end:
+                allowed_channels.append(channel)
+    return allowed_channels
+
+
+def channels_for_country(country_code, lines):
+    country_rules_block = get_country_rules_block(country_code, lines)
+    frequency_blocks = get_frequencies_from_country_block(country_rules_block)
+    frequency_blocks = flatten_frequency_blocks(frequency_blocks)
+    useable_channels = get_channel_list_from_frequency_blocks(frequency_blocks)
+    # blacklist 2482 given adapters seem to hard block it so often
+    # Channel 14 is valid only for DSSS and CCK modes in Japan anyway
+    # OFDM (i.e., 802.11g) may not be used. (IEEE 802.11-2007 §19.4.2)
