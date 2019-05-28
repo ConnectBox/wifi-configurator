@@ -85,7 +85,7 @@ def test_unset_freq_extraction(regdb_lines):
     freq_blocks = scan.get_frequencies_from_country_block(block_lines)
     assert freq_blocks == [
         (2402, 2472),
-        (2457, 2482),
+        (2457, 2474),
         (5170, 5250),
         (5250, 5330),
         (5490, 5730),
@@ -97,7 +97,7 @@ def test_flattening_of_unset_freqs(regdb_lines):
     block_lines = scan.get_country_rules_block("00", regdb_lines)
     freq_blocks = scan.get_frequencies_from_country_block(block_lines)
     assert scan.flatten_frequency_blocks(freq_blocks) == [
-        (2402, 2482),
+        (2402, 2474),
         (5170, 5330),
         (5490, 5730),
         (5735, 5835),
@@ -130,7 +130,7 @@ def test_jp_freq_extraction(regdb_lines):
     block_lines = scan.get_country_rules_block("JP", regdb_lines)
     freq_blocks = scan.get_frequencies_from_country_block(block_lines)
     assert freq_blocks == [
-        (2402, 2482),
+        (2402, 2474),
         (4910, 4990),
         (5030, 5090),
         (5170, 5250),
@@ -143,7 +143,7 @@ def test_flattening_of_jp_freqs(regdb_lines):
     block_lines = scan.get_country_rules_block("JP", regdb_lines)
     freq_blocks = scan.get_frequencies_from_country_block(block_lines)
     assert scan.flatten_frequency_blocks(freq_blocks) == [
-        (2402, 2482),
+        (2402, 2474),
         (4910, 4990),
         (5030, 5090),
         (5170, 5330),

@@ -97,25 +97,44 @@ def get_country_rules_block(country_code, lines):
 
 def get_frequencies_from_country_block(lines):
     freqency_blocks = []
+    block_lower_point = 0
+    block_upper_point = 0
     # Drop the line with the country definition
     frequency_lines = lines[1:]
     # example frequency line format
     # \t(2457.000 - 2482.000 @ 20.000), (20.00), (N/A), NO-IR, AUTO-BW
     for line in frequency_lines:
-        # We can't use a frequency marked as NO-OFDM, so we must
-        #  drop them. This includes channel 14 in JP and 12+13 in 00
-        if "NO-OFDM" in line:
-            continue
-
         # Dump leading whitespace,
         # grab everything to the left of the @
         # drop the first character (the paranthesis)
         freq_section = line.strip().split("@")[0][1:]
-        freq_from, freq_to = [
+        new_block_lower_point, new_block_upper_point = [
             float(freq.strip()) for freq in freq_section.split("-")
         ]
-        freqency_blocks.append((freq_from, freq_to))
+        # We can't use a frequency marked as NO-OFDM, so we must
+        #  drop them. This includes channel 14 in JP and 12+13 in 00
+        # NO-OFDM may overlap with the range on the previous line (strictly
+        #  speaking it could be many lines of overlap, but let's ignore that
+        #  given there's only 00 and JP with NO-OFDM and that doesn't go back
+        #  more than one line.
+        if "NO-OFDM" in line:
+            # If the NO-OFDM line encroaches on the top end of the previous
+            #  block, redefine the top of the previous block to be where the
+            #  NO-OFDM block starts
+            if new_block_lower_point < block_upper_point:
+                block_upper_point = new_block_lower_point
+            continue
 
+        # Process the last block
+        if block_lower_point and block_upper_point:
+            freqency_blocks.append((block_lower_point, block_upper_point))
+
+        # and remember this block for subsequent processing
+        block_lower_point = new_block_lower_point
+        block_upper_point = new_block_upper_point
+
+    if block_lower_point and block_upper_point:
+        freqency_blocks.append((block_lower_point, block_upper_point))
     return freqency_blocks
 
 def flatten_frequency_blocks(blocks):
@@ -164,6 +183,4 @@ def channels_for_country(country_code, lines):
     frequency_blocks = get_frequencies_from_country_block(country_rules_block)
     frequency_blocks = flatten_frequency_blocks(frequency_blocks)
     useable_channels = get_channel_list_from_frequency_blocks(frequency_blocks)
-    # blacklist 2482 given adapters seem to hard block it so often
-    # Channel 14 is valid only for DSSS and CCK modes in Japan anyway
-    # OFDM (i.e., 802.11g) may not be used. (IEEE 802.11-2007 §19.4.2)
+    return useable_channels
