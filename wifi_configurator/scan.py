@@ -69,7 +69,7 @@ def detect_regdomain(wlan_if):
             return ""
 
         iw = subprocess.run([
-            "iw",
+            "/sbin/iw",
             "dev",
             wlan_if.dev,
             "scan"
