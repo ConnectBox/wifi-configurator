@@ -36,7 +36,7 @@ def get_current_ssid(config):
     return config.get("ssid", DEFAULT_SSID)
 
 def get_current_channel(config):
-    return config.get("channel", DEFAULT_CHANNEL)
+    return int(config.get("channel", DEFAULT_CHANNEL))
 
 def get_current_ht_capab(config):
     return config.get("ht_capab", "")
@@ -108,6 +108,7 @@ def cb_handle_output(ctx, param, value):
               help="Set a new ssid for the access point")
 # Add validation (possibly even taking region into account)
 @click.option('-c', '--channel',
+              type=int,
               help="Set a new channel for the access point")
 @click.option('-o', '--output',
               callback=cb_handle_output,
@@ -133,8 +134,6 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     #  (filename possibly needs is_eager) or by subclassing click.Option
     if not ssid:
         ssid = get_current_ssid(config)
-    if not channel:
-        channel = get_current_channel(config)
 
     wifi_adapter = adapters.factory(interface)
     # Retrieve the previous cc now, given we have so many fallback cases
@@ -157,6 +156,23 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
             # Can't detect the regdomain. Fallback to existing
             click.echo("Unable to query interface %s with pyw. Using "
                        "previous country code" % (interface,))
+
+    valid_channels_for_cc = scan.channels_for_country(country_code)
+    if not channel:
+        channel = get_current_channel(config)
+        if channel not in valid_channels_for_cc:
+            click.echo("Channel %s is not valid for new country code %s. "
+                       "Setting channel to %s" % (channel, country_code,
+                                                  valid_channels_for_cc[0]))
+            channel = valid_channels_for_cc[0]
+    else:
+        if channel not in valid_channels_for_cc:
+            raise click.BadParameter(
+                "Channel %s is not valid for country code %s. Valid choices "
+                "are %s. Exiting" % (
+                    channel,
+                    country_code,
+                    ",".join([str(i) for i in valid_channels_for_cc])))
 
     file_loader = jinja2.PackageLoader('wifi_configurator', 'templates')
     env = jinja2.Environment(

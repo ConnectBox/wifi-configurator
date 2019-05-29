@@ -178,9 +178,11 @@ def get_channel_list_from_frequency_blocks(freq_list):
     return allowed_channels
 
 
-def channels_for_country(country_code, lines):
+def channels_for_country(country_code):
+    regdump = subprocess.run(["/sbin/regdbdump", "/lib/crda/regulatory.bin"],
+                             stdout=subprocess.PIPE)
+    lines = regdump.stdout.decode('utf-8').split("\n")
     country_rules_block = get_country_rules_block(country_code, lines)
     frequency_blocks = get_frequencies_from_country_block(country_rules_block)
     frequency_blocks = flatten_frequency_blocks(frequency_blocks)
-    useable_channels = get_channel_list_from_frequency_blocks(frequency_blocks)
-    return useable_channels
+    return get_channel_list_from_frequency_blocks(frequency_blocks)

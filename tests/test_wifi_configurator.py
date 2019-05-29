@@ -3,10 +3,11 @@
 
 """Tests for `wifi_configurator` package."""
 
-
+import sys
 import unittest
 from click.testing import CliRunner
 import click
+import pytest
 
 from wifi_configurator import cli
 
@@ -25,7 +26,7 @@ class TestWifi_configurator(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    @unittest.skip("Change filename to be an argument, not option.")
+    @pytest.mark.skip(reason="Change filename to be an argument, not option.")
     def test_command_line_interface(self):
         """Test the CLI."""
         runner = CliRunner()
@@ -36,6 +37,8 @@ class TestWifi_configurator(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn('--help   Show this message and exit.', help_result.output)
 
+    @pytest.mark.skipif(sys.platform != "linux2",
+                        reason="test requires regdbdump - linux only")
     def test_filename_dash_to_stdout(self):
         """Test taking config on stdin automatically writes to stdout"""
         runner = CliRunner()
@@ -46,6 +49,8 @@ class TestWifi_configurator(unittest.TestCase):
         self.assertFalse(result.exception)
         self.assertIn("interface=wlan0", result.output)
 
+    @pytest.mark.skipif(sys.platform != "linux2",
+                        reason="test requires regdbdump - linux only")
     def test_output_dash_to_stdout(self):
         """Test output = dash writes to stdout"""
         runner = CliRunner()
@@ -60,7 +65,7 @@ class TestWifi_configurator(unittest.TestCase):
             self.assertFalse(result.exception)
             self.assertIn("interface=wlan0", result.output)
 
-    @unittest.skip("Change filename to be an argument. Then handle missing file")
+    @pytest.mark.skip(reason="Change filename to be an argument. Then handle missing file")
     def test_missing_filename_file(self):
         pass
 
