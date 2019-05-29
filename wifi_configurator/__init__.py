@@ -4,4 +4,4 @@
 
 __author__ = """Edwin Steele"""
 __email__ = 'edwin@wordspeak.org'
-__version__ = '1.1.1'
+__version__ = '1.2.0'
