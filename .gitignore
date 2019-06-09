@@ -103,3 +103,5 @@ ENV/
 
 # Vim
 *.swp
+.vscode/launch.json
+.vscode/settings.json
