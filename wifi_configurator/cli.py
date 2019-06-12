@@ -3,6 +3,7 @@
 """Console script for wifi_configurator."""
 import functools
 import os
+import random
 import subprocess
 import sys
 
@@ -136,29 +137,50 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         ssid = get_current_ssid(config)
 
     wifi_adapter = adapters.factory(interface)
-    # Retrieve the previous cc now, given we have so many fallback cases
-    country_code = get_current_country_code(config)
-    if set_country_code:
-        # We deliberately instantiate this only for set_country_code because
-        #  pyw gets sad if operations are attempted on a device that does not
-        #  support nl80211
+    # We deliberately only instantiate pyw.getcard for as small a set of
+    #  parameters as possible because pyw gets sad if operations are
+    #  attempted on a device that does not support nl80211 and we want to
+    #  be to do as many things as possible in simulations
+    scan_output = ""
+    if set_country_code or not channel:
         try:
             if pyw.iswireless(interface):
                 wlan_if = pyw.getcard(interface)
-                scanned_cc = scan.detect_regdomain(wlan_if)
-                # Only use the scanned cc if it's non-empty
-                if scanned_cc:
-                    country_code = scanned_cc
+                scan_output = scan.get_scan_output(wlan_if)
             else:
-                click.echo("Interface %s is not a wifi interface. Using "
-                           "previous country code" % (interface,))
+                click.echo("Interface %s is not a wifi interface. Won't be "
+                           "able to infer country code or do automatic "
+                           "channel selection" % (interface,))
         except pyric.error:
-            # Can't detect the regdomain. Fallback to existing
-            click.echo("Unable to query interface %s with pyw. Using "
-                       "previous country code" % (interface,))
+            click.echo("Unable to query interface %s with pyw. Won't be "
+                       "able to infer country code or do automatic "
+                       "channel selection" % (interface,))
+
+    # Retrieve the previous cc now, given we have so many fallback cases
+    country_code = get_current_country_code(config)
+    if set_country_code:
+        scanned_cc = scan.detect_regdomain(scan_output)
+        # Only use the scanned cc if it's non-empty
+        if scanned_cc:
+            country_code = scanned_cc
+        else:
+            click.echo("Could not do wifi scan. Using previous country code")
 
     valid_channels_for_cc = scan.channels_for_country(country_code)
     if not channel:
+        # Choose an uncontested channel, or a random one if there aren't any
+        # MEH that we respecify wlan_if when we've used it to scan just a bit
+        #  earlier
+        channel = scan.get_available_uncontested_channel(
+            valid_channels_for_cc, scan_output
+        )
+        if not channel:
+            channel = random.choice(valid_channels_for_cc)
+            click.echo("No uncontested channels. Choosing %s at random" %
+                       (channel,))
+        else:
+            click.echo("Channel %s is uncontested and is now the new channel" %
+                       (channel,))
         channel = get_current_channel(config)
         if channel not in valid_channels_for_cc:
             click.echo("Channel %s is not valid for new country code %s. "

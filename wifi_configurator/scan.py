@@ -1,10 +1,15 @@
 import collections
+import functools
 from pathlib import Path
 import subprocess
 import re
 import configobj
 import pyric.pyw as pyw
 import pyric.utils.channels as channels
+
+# OFDM. We don't use DSSS, so their 22MHz width doesn't matter
+CHANNEL_WIDTH_MHZ_24 = 20
+NO_CHANNEL = 0
 
 
 class ActiveWifiInterface:
@@ -56,14 +61,9 @@ def get_consensus_regdomain_from_iw_output(iw_output):
 
     return ""
 
-def detect_regdomain(wlan_if):
-    crda_config = Path("/etc/default/crda")
-    c = configobj.ConfigObj(crda_config.as_posix())
-    # Treat any REGDOMAIN setting in crda as a deliberate override
-    regdomain = c.get("REGDOMAIN", "")
-    if regdomain:
-        return regdomain
 
+@functools.lru_cache()
+def get_scan_output(wlan_if):
     with ActiveWifiInterface(wlan_if) as awi:
         if not awi:
             return ""
@@ -74,7 +74,93 @@ def detect_regdomain(wlan_if):
             wlan_if.dev,
             "scan"
         ], stdout=subprocess.PIPE)
-        return get_consensus_regdomain_from_iw_output(iw.stdout.decode('utf-8'))
+        return iw.stdout.decode("utf-8")
+
+
+def get_freq_signal_tuples_from_iw_output(iw_output):
+    freq_signal_tuples = []
+    freq = 0
+    signal = 0.0
+    print(iw_output)
+    for line in iw_output.split("\n"):
+        line = line.strip()
+        if line.startswith("BSS"):
+            # New BSS (or first one)
+            if freq and signal:
+                # It's a new BSS so process the last reading
+                freq_signal_tuples.append((freq, signal))
+            continue
+
+        # freq: 2412
+        if line.startswith("freq:"):
+            _, freq_str = line.split(":")
+            freq = int(freq_str)
+            continue
+
+        # signal: -48.00 dBm
+        if line.startswith("signal:"):
+            _, signal_str = line.split(":")
+            signal = float(signal_str.strip().split(" ")[0])
+            continue
+
+    # Process the reading from the last BSS, assuming there was one
+    if freq and signal:
+        freq_signal_tuples.append((freq, signal))
+    return freq_signal_tuples
+
+
+def get_max_signal_at_each_freq(freq_signal_tuples):
+    freq_signal_map = {}
+    for freq, signal in freq_signal_tuples:
+        if freq in freq_signal_map:
+            if signal > freq_signal_map[freq]:
+                freq_signal_map[freq] = signal
+        else:
+            freq_signal_map[freq] = signal
+
+
+def channel_overlaps_with_others(channel, channel_list):
+    # we don't care about overlaps at endpoints, so add 1 to the base
+    # (range strips the top value anyway)
+    freq_range = set(range(
+        channels.ISM_24_C2F[channel] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
+        channels.ISM_24_C2F[channel] + (CHANNEL_WIDTH_MHZ_24 // 2)
+    ))
+    for item in channel_list:
+        item_freq_range = set(range(
+            channels.ISM_24_C2F[item] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
+            channels.ISM_24_C2F[item] + (CHANNEL_WIDTH_MHZ_24 // 2)
+        ))
+        if channel == 10 and item == 7:
+            print(channel, item, freq_range, item_freq_range)
+        if freq_range.intersection(item_freq_range):
+            return True
+
+    return False
+
+
+def get_available_uncontested_channel(all_available_channels, scan_output):
+    freq_signal_tuples = get_freq_signal_tuples_from_iw_output(scan_output)
+    used_channels = [
+        channels.ISM_24_F2C[freq] for freq, _ in freq_signal_tuples
+    ]
+    for channel in all_available_channels:
+        if not channel_overlaps_with_others(channel, used_channels):
+            return channel
+
+    return NO_CHANNEL
+
+
+def detect_regdomain(scan_output):
+    crda_config = Path("/etc/default/crda")
+    c = configobj.ConfigObj(crda_config.as_posix())
+    # Treat any REGDOMAIN setting in crda as a deliberate override
+    regdomain = c.get("REGDOMAIN", "")
+    if regdomain:
+        return regdomain
+
+    return get_consensus_regdomain_from_iw_output(scan_output)
+
 
 def get_country_rules_block(country_code, lines):
     in_country_block = False
@@ -95,7 +181,8 @@ def get_country_rules_block(country_code, lines):
 
     return country_lines
 
-def get_frequencies_from_country_block(lines):
+
+def get_frequency_blocks_from_country_block(lines):
     freqency_blocks = []
     block_lower_point = 0
     block_upper_point = 0
@@ -137,6 +224,7 @@ def get_frequencies_from_country_block(lines):
         freqency_blocks.append((block_lower_point, block_upper_point))
     return freqency_blocks
 
+
 def flatten_frequency_blocks(blocks):
     # We don't care for the power or band specific rules, so we can
     #  collapse the frequency ranges. regdb output is always sorted
@@ -167,13 +255,11 @@ def flatten_frequency_blocks(blocks):
 
 def get_channel_list_from_frequency_blocks(freq_list):
     allowed_channels = []
-    # for 2.4GHz
-    width_from_centre = 10
     for channel, centre_freq in channels.ISM_24_C2F.items():
         for start, end in freq_list:
             # i.e. is the channel wholely contained in the block?
-            if start <= centre_freq - width_from_centre and \
-                   centre_freq + width_from_centre <= end:
+            if start <= centre_freq - (CHANNEL_WIDTH_MHZ_24 / 2) and \
+                   centre_freq + (CHANNEL_WIDTH_MHZ_24 / 2) <= end:
                 allowed_channels.append(channel)
     return allowed_channels
 
@@ -183,6 +269,6 @@ def channels_for_country(country_code):
                              stdout=subprocess.PIPE)
     lines = regdump.stdout.decode('utf-8').split("\n")
     country_rules_block = get_country_rules_block(country_code, lines)
-    frequency_blocks = get_frequencies_from_country_block(country_rules_block)
+    frequency_blocks = get_frequency_blocks_from_country_block(country_rules_block)
     frequency_blocks = flatten_frequency_blocks(frequency_blocks)
     return get_channel_list_from_frequency_blocks(frequency_blocks)

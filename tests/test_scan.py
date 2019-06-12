@@ -3,6 +3,15 @@
 
 from wifi_configurator import scan
 
+
+def freq_signal_dict_as_scan_output(cs_dict):
+    scan_output = ""
+    for freq, signal in cs_dict.items():
+        scan_output = scan_output + \
+            "BSS: blah\nfreq: %s\nsignal: %s\n" % (freq, signal)
+    return scan_output
+
+
 def test_get_country_count_populated(iw_dev_scan_0):
     c = scan.get_country_count_from_iw_output(iw_dev_scan_0)
     assert c.most_common(1)[0][0] == "TR"
@@ -37,7 +46,7 @@ def test_get_country_rules_block_matching(regdb_lines):
 
 def test_au_freq_extraction(regdb_lines):
     block_lines = scan.get_country_rules_block("AU", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     assert freq_blocks == [
         (2402, 2482),
         (5170, 5250),
@@ -48,7 +57,7 @@ def test_au_freq_extraction(regdb_lines):
 
 def test_flattening_of_au_freqs(regdb_lines):
     block_lines = scan.get_country_rules_block("AU", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     freq_blocks = scan.flatten_frequency_blocks(freq_blocks)
     assert scan.flatten_frequency_blocks(freq_blocks) == [
         (2402, 2482),
@@ -59,7 +68,7 @@ def test_flattening_of_au_freqs(regdb_lines):
 
 def test_channel_list_au(regdb_lines):
     block_lines = scan.get_country_rules_block("AU", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     freq_blocks = scan.flatten_frequency_blocks(freq_blocks)
     assert scan.get_channel_list_from_frequency_blocks(freq_blocks) == \
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -82,7 +91,7 @@ def test_get_country_rules_block_first(regdb_lines):
 
 def test_unset_freq_extraction(regdb_lines):
     block_lines = scan.get_country_rules_block("00", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     assert freq_blocks == [
         (2402, 2472),
         (2457, 2474),
@@ -95,7 +104,7 @@ def test_unset_freq_extraction(regdb_lines):
 
 def test_flattening_of_unset_freqs(regdb_lines):
     block_lines = scan.get_country_rules_block("00", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     assert scan.flatten_frequency_blocks(freq_blocks) == [
         (2402, 2474),
         (5170, 5330),
@@ -106,7 +115,7 @@ def test_flattening_of_unset_freqs(regdb_lines):
 
 def test_channel_list_unset(regdb_lines):
     block_lines = scan.get_country_rules_block("00", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     freq_blocks = scan.flatten_frequency_blocks(freq_blocks)
     assert scan.get_channel_list_from_frequency_blocks(freq_blocks) == \
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
@@ -128,7 +137,7 @@ def test_get_country_rules_block_jp(regdb_lines):
 
 def test_jp_freq_extraction(regdb_lines):
     block_lines = scan.get_country_rules_block("JP", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     assert freq_blocks == [
         (2402, 2474),
         (4910, 4990),
@@ -141,7 +150,7 @@ def test_jp_freq_extraction(regdb_lines):
 
 def test_flattening_of_jp_freqs(regdb_lines):
     block_lines = scan.get_country_rules_block("JP", regdb_lines)
-    freq_blocks = scan.get_frequencies_from_country_block(block_lines)
+    freq_blocks = scan.get_frequency_blocks_from_country_block(block_lines)
     assert scan.flatten_frequency_blocks(freq_blocks) == [
         (2402, 2474),
         (4910, 4990),
@@ -154,3 +163,111 @@ def test_flattening_of_jp_freqs(regdb_lines):
 def test_get_country_rules_block_unmatched(regdb_lines):
     block_lines = scan.get_country_rules_block("NOMATCH", regdb_lines)
     assert not block_lines
+
+def test_get_freq_signals_0(iw_dev_scan_0):
+    assert scan.get_freq_signal_tuples_from_iw_output(iw_dev_scan_0) == [
+        (2412, -48.0),
+        (2432, -84.0),
+        (2442, -42.0),
+        (2442, -83.0),
+        (2442, -82.0),
+        (2462, -85.0),
+        (5180, -89.0),
+        (2412, -84.0),
+        (2452, -88.0),
+    ]
+
+def test_get_freq_signals_1(iw_dev_scan_1):
+    assert scan.get_freq_signal_tuples_from_iw_output(iw_dev_scan_1) == [
+        (2412, -48.0),
+    ]
+
+
+def test_get_freq_signals_2(iw_dev_scan_2):
+    assert scan.get_freq_signal_tuples_from_iw_output(iw_dev_scan_2) == []
+
+def test_get_freq_signals_3(iw_dev_scan_3):
+    assert scan.get_freq_signal_tuples_from_iw_output(iw_dev_scan_3) == [
+        (2412, -32.0),
+        (2442, -36.0),
+        (5180, -25.0),
+    ]
+
+
+def test_overlap_empty_full():
+    assert not scan.channel_overlaps_with_others(1, [])
+    assert scan.channel_overlaps_with_others(
+        1,
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    )
+
+
+def test_overlap_end_spectrum():
+    assert not scan.channel_overlaps_with_others(
+        1,
+        [5, 6, 7, 8, 9, 10, 11, 12, 13]
+    )
+    assert scan.channel_overlaps_with_others(1, [4])
+    assert not scan.channel_overlaps_with_others(
+        13,
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    )
+    assert scan.channel_overlaps_with_others(13, [10])
+
+
+def test_overlap_mid_spectrum():
+    assert not scan.channel_overlaps_with_others(
+        5,
+        [1, 9, 10, 11, 12, 13]
+    )
+    assert scan.channel_overlaps_with_others(
+        5,
+        [1, 2, 9, 10, 11, 12, 13]
+    )
+    assert scan.channel_overlaps_with_others(
+        5,
+        [1, 8, 9, 10, 11, 12, 13]
+    )
+    assert not scan.channel_overlaps_with_others(
+        9,
+        [1, 2, 3, 4, 5, 13]
+    )
+    assert scan.channel_overlaps_with_others(
+        9,
+        [1, 2, 3, 4, 5, 6, 13]
+    )
+    assert scan.channel_overlaps_with_others(
+        9,
+        [1, 2, 3, 4, 5, 12, 13]
+    )
+    #assert not scan.channel_overlaps_with_others(
+    #    10,
+    #    [1, 2, 3, 4, 5, 6, 7, 13]
+    #)
+    assert not scan.channel_overlaps_with_others(
+        9,
+        [5, 13]
+    )
+    assert scan.channel_overlaps_with_others(
+        9,
+        [6]
+    )
+    assert scan.channel_overlaps_with_others(
+        9,
+        [12]
+    )
+
+
+def test_uncontested_channels():
+    # 3 knocks out 1-6, 9 knocks out 7-12, 13 knocks out 10-13
+    assert scan.get_available_uncontested_channel(
+        range(1, 14),
+        freq_signal_dict_as_scan_output(
+            {2422: -50, 2452: -50, 2472: -50}
+        )
+    ) == scan.NO_CHANNEL
+    # 3 knocks out 1-5, 9 knocks out 7-12, leaving 13
+    assert scan.get_available_uncontested_channel(
+        range(1, 14),
+        freq_signal_dict_as_scan_output({2422:-50, 2452:-50})
+    ) == 13
