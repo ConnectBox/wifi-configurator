@@ -105,3 +105,11 @@ ENV/
 *.swp
 .vscode/launch.json
 .vscode/settings.json
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/wifi-configurator.iml
+.idea/workspace.xml
+.idea/codeStyles/codeStyleConfig.xml
+.idea/inspectionProfiles/Project_Default.xml
+.vscode/tasks.json
