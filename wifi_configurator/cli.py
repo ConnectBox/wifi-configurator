@@ -30,30 +30,37 @@ def hostapd_conf_as_config(filename):
                (filename,))
     return configobj.ConfigObj()
 
+
 # The following get_current_... methods are crafted to take steps to recover
 #  from a busted config file by defaulting to values that will allow hostapd
 #  to start
 def get_current_ssid(config):
     return config.get("ssid", DEFAULT_SSID)
 
+
 def get_current_channel(config):
     return int(config.get("channel", DEFAULT_CHANNEL))
+
 
 def get_current_ht_capab(config):
     return config.get("ht_capab", "")
 
+
 def get_current_country_code(config):
     return config.get("country_code", "")
 
+
 def get_current_ac_mode(config):
     return config.get("ieee80211ac", "0")
+
 
 def get_current_wpa_passphrase(config):
     # If it's not set, then pass back an empty string and we can follow
     #  the logic as if we're turning off password protection
     return config.get("wpa_passphrase", "")
 
-def cb_handle_wpa_passphrase(ctx, param, value):
+
+def cb_handle_wpa_passphrase(ctx, _, value):
     # IF the passphrase is None, re-use whatever is already in config
     # We can't do a basic equality check here, because an empty string is
     #  used to disable password protection, and that's different to not
@@ -72,13 +79,15 @@ def cb_handle_wpa_passphrase(ctx, param, value):
 
     raise click.BadParameter('Passphrase must be 8-63 characters long or empty')
 
-def cb_handle_filename(ctx, param, value):
+
+def cb_handle_filename(_, _2, value):
     if value == "-":
         return sys.stdin
 
     return value
 
-def cb_handle_output(ctx, param, value):
+
+def cb_handle_output(ctx, _, value):
     if not value:
         if ctx.params["filename"] == sys.stdin:
             return sys.stdout
@@ -196,7 +205,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
                     country_code,
                     ",".join([str(i) for i in valid_channels_for_cc])))
 
-    file_loader = jinja2.PackageLoader('wifi_configurator', 'templates')
+    file_loader = jinja2.PackageLoader('wifi_configurator')
     env = jinja2.Environment(
         loader=file_loader,
         trim_blocks=True,
@@ -219,7 +228,3 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     if sync and output != sys.stdout:
         subprocess.run("/bin/sync")
     return 0
-
-
-#if __name__ == "__main__":
-#    sys.exit(main())  # pragma: no cover
