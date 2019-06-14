@@ -3,6 +3,8 @@ import functools
 from pathlib import Path
 import subprocess
 import re
+
+import click
 import configobj
 import pyric.pyw as pyw
 import pyric.utils.channels as channels
@@ -81,7 +83,6 @@ def get_freq_signal_tuples_from_iw_output(iw_output):
     freq_signal_tuples = []
     freq = 0
     signal = 0.0
-    print(iw_output)
     for line in iw_output.split("\n"):
         line = line.strip()
         if line.startswith("BSS"):
@@ -131,8 +132,6 @@ def channel_overlaps_with_others(channel, channel_list):
             channels.ISM_24_C2F[item] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
             channels.ISM_24_C2F[item] + (CHANNEL_WIDTH_MHZ_24 // 2)
         ))
-        if channel == 10 and item == 7:
-            print(channel, item, freq_range, item_freq_range)
         if freq_range.intersection(item_freq_range):
             return True
 
@@ -143,7 +142,12 @@ def get_available_uncontested_channel(all_available_channels, scan_output):
     freq_signal_tuples = get_freq_signal_tuples_from_iw_output(scan_output)
     used_channels = [
         channels.ISM_24_F2C[freq] for freq, _ in freq_signal_tuples
+        if freq in channels.ISM_24_F2C  # ignore non 2.4Ghz for the moment
     ]
+    click.echo("Available channels are: %s" %
+               (",".join([str(c) for c in all_available_channels])))
+    click.echo("Used channels are: %s" %
+               (",".join([str(c) for c in used_channels])))
     for channel in all_available_channels:
         if not channel_overlaps_with_others(channel, used_channels):
             return channel

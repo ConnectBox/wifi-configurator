@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """Console script for wifi_configurator."""
 import functools
 import os
@@ -228,3 +227,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     if sync and output != sys.stdout:
         subprocess.run("/bin/sync")
     return 0
+
+
+if __name__ == "__main__":
+    main()
