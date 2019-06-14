@@ -103,5 +103,5 @@ ENV/
 
 # Vim
 *.swp
-.vscode
-.idea
+.vscode/
+.idea/
