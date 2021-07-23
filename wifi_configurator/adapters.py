@@ -28,7 +28,7 @@ class RTL8812AU:
     #  difficulty of configuration across regulatory domains
     # Note that RX-STBC1 is not available for 5GHz on this device
     #  so we may need to remove it if we enable that band.
-    ht_capab = "[HT20][GF][SHORT-GI-20][RX-STBC1][MAX-AMSDU-7935]"
+    ht_capab = "[HT20][SHORT-GI-20][RX-STBC1][MAX-AMSDU-7935]"
     # None of the vht_capab advertised by the hardware (iw list) are
     #  supported (seemingly, by the driver)
     vht_capab = ""
