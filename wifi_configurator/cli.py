@@ -17,7 +17,7 @@ from . import scan
 
 
 SYSLOG_TAG = "wifi-configurator"
-DEFAULT_SSID = "WayPoint - Free Media"
+DEFAULT_SSID = "ConnectBox - Free Media"
 DEFAULT_CHANNEL = "7"
 
 
