@@ -53,7 +53,22 @@ class Realtek5372:
     def __str__(self):
         return "Realtek 5372 802.11n wifi adapter"
 
-
+class MT7601:
+    """
+    Media Teck 7601U (eternal USB shipped with Neo Connectbox for Client Side)
+    """
+    PRODUCT = "148f/7601/100"
+    #Media Teck (external USB shipped with NEO Connectbox)
+    WirelessMode = 5
+    # Set Wireless Mode to 11ABGN mixed
+    ht_capab = "[HT20][SHORT-GI-20][HT40]"
+    vht_capab = ""
+    ac_active = 0
+    
+    def __str__(self):
+        return "Media Teck 7601U series 802.11n wifi adapter"
+        
+        
 class BCM4343x:
     """
     Broadcom 4343x series

@@ -14,10 +14,10 @@ import pyric.pyw as pyw
 
 from . import adapters
 from . import scan
-
+from .branding import Brand
 
 SYSLOG_TAG = "wifi-configurator"
-DEFAULT_SSID = "ConnectBox - Free Media"
+DEFAULT_SSID = Brand.name() + " - Free Media"
 DEFAULT_CHANNEL = "7"
 
 
