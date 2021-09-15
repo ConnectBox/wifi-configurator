@@ -14,10 +14,10 @@ import pyric.pyw as pyw
 
 from . import adapters
 from . import scan
-import neo_batterylevelshutdown.globals as globals
+
 
 SYSLOG_TAG = "wifi-configurator"
-DEFAULT_SSID = brand_name + " - Free Media"
+DEFAULT_SSID = " - Free Media"
 DEFAULT_CHANNEL = "7"
 
 
@@ -34,7 +34,10 @@ def hostapd_conf_as_config(filename):
 #  from a busted config file by defaulting to values that will allow hostapd
 #  to start
 def get_current_ssid(config):
-    return config.get("ssid", DEFAULT_SSID)
+    with open('/usr/local/connectbox/brand_name.txt', encoding='utf-8') as f:
+    brand_name = f.read()
+    f.close()
+    return config.get("ssid", (brand_name + DEFAULT_SSID))
 
 
 def get_current_channel(config):
