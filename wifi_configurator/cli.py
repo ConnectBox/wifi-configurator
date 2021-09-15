@@ -14,10 +14,10 @@ import pyric.pyw as pyw
 
 from . import adapters
 from . import scan
-from .branding import Brand
+import neo_batterylevelshutdown.globals as globals
 
 SYSLOG_TAG = "wifi-configurator"
-DEFAULT_SSID = Brand.name() + " - Free Media"
+DEFAULT_SSID = brand_name + " - Free Media"
 DEFAULT_CHANNEL = "7"
 
 
