@@ -34,7 +34,7 @@ def hostapd_conf_as_config(filename):
 #  from a busted config file by defaulting to values that will allow hostapd
 #  to start
 def get_current_ssid(config):
-    with open('/usr/local/connectbox/brand_name.txt', encoding='utf-8') as f:
+    with open('/etc/hostname', encoding='utf-8') as f:
     brand_name = f.read()
     f.close()
     return config.get("ssid", (brand_name + DEFAULT_SSID))
