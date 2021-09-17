@@ -39,8 +39,8 @@ def get_current_ssid(config):
 with open('/usr/local/connectbox/brand.txt') as f:
   data = f.read()
   f.close()
-js = json.loads(data)
-brand_name = js["Brand"]
+  js = json.loads(data)
+  brand_name = js["Brand"]
 return config.get("ssid", (brand_name + DEFAULT_SSID))
 
 
