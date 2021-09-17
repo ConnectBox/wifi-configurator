@@ -5,7 +5,7 @@ import os
 import random
 import subprocess
 import sys
-
+import json
 import click
 import configobj
 import jinja2
@@ -34,9 +34,12 @@ def hostapd_conf_as_config(filename):
 #  from a busted config file by defaulting to values that will allow hostapd
 #  to start
 def get_current_ssid(config):
-    with open('/etc/hostname', encoding='utf-8') as f:
-    brand_name = f.read()
-    f.close()
+# Using a dictionary and json to store Branding stuff
+# Read the dictionary
+  with open('/usr/local/connectbox/brand.txt') as f:
+    data = f.read()
+  js = json.loads(data)
+  brand_name = js["Brand"]
     return config.get("ssid", (brand_name + DEFAULT_SSID))
 
 
