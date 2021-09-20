@@ -36,12 +36,12 @@ def hostapd_conf_as_config(filename):
 def get_current_ssid(config):
 # Using a dictionary and json to store Branding stuff
 # Read the dictionary
-with open('/usr/local/connectbox/brand.txt') as f:
-  data = f.read()
-  f.close()
-  js = json.loads(data)
-  brand_name = js["Brand"]
-return config.get("ssid", (brand_name + DEFAULT_SSID))
+  with open('/usr/local/connectbox/brand.txt') as f:
+    data = f.read()
+    f.close()
+    js = json.loads(data)
+    brand_name = js["Brand"]
+  return config.get("ssid", (brand_name + DEFAULT_SSID))
 
 
 def get_current_channel(config):
