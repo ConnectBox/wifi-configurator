@@ -55,7 +55,6 @@ def get_current_ht_capab(config):
 def get_current_country_code(config):
     return config.get("country_code", "")
 
-
 def get_current_ac_mode(config):
     return config.get("ieee80211ac", "0")
 
