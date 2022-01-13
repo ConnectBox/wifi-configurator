@@ -19,7 +19,7 @@ from . import scan
 SYSLOG_TAG = "wifi-configurator"
 DEFAULT_SSID = " - Free Media"
 DEFAULT_CHANNEL = "7"
-
+INTERFACE = 'wlan0'
 
 @functools.lru_cache()
 def hostapd_conf_as_config(filename):
@@ -43,6 +43,17 @@ def get_current_ssid(config):
     brand_name = js["Brand"]
   return config.get("ssid", (brand_name + DEFAULT_SSID))
 
+def get_current_interface(config):
+# Since we now have in the neo_battery_shutdown a wifi channel identifier
+# we want to use the listed interface for our configuration
+    try:
+        with open('/usr/local/connectbox/wificonf.txt') as f:
+            data = f.read()
+            f.close()
+            a = data.split("\n")
+            return(a[0])
+    except:
+        return(INTERFACE)
 
 def get_current_channel(config):
     return int(config.get("channel", DEFAULT_CHANNEL))
@@ -116,7 +127,7 @@ def cb_handle_output(ctx, _, value):
               help="Input file to be used for values not being updated. "
                    "Defaults to /etc/hostapd/hostapd.conf")
 @click.option('-i', '--interface',
-              default="wlan0",
+              default=INTERFACE,
               help="Wifi interface name. Defaults to wlan0")
 # Add length check (32 octets)
 @click.option('-s', '--ssid',
@@ -149,6 +160,8 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     #  (filename possibly needs is_eager) or by subclassing click.Option
     if not ssid:
         ssid = get_current_ssid(config)
+
+    interface = get_current_interface(config)
 
     wifi_adapter = adapters.factory(interface)
     # We deliberately only instantiate pyw.getcard for as small a set of
