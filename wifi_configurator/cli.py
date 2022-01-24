@@ -239,6 +239,11 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         wpa_passphrase=wpa_passphrase,
     )
     rendered.dump(output)
+    file_loader = jinja2.FileSystemLoader("/etc/wpa_supplicant/templates", encoding='utf-8', followlinks=False)
+    template = env.get_template('wpa_supplicant.conf.j2')
+    rendered = template.stream(
+        country=country_code)
+    rendered.dump('/etc/wpa_supplicant/wpa_supplicant.conf')
     # Some filesystems don't write to disk for a while, which can lead to
     #  corruption in files. A corrupt hostapd.conf may well brick a device
     #  in the field so let's avoid that risk.
