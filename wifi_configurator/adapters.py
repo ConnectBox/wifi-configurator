@@ -18,6 +18,7 @@ class RTL8812AU:
     PRODUCT_list = [
         "bda/8812/0",
         "bda/881a/0",
+        "bda/b812/0"
     ]
     # iw list reports "Static SM Power Save" in capabilities for
     #  this device, but hostapd is unable to start if SMPS-STATIC
