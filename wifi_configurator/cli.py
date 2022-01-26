@@ -11,6 +11,7 @@ import configobj
 import jinja2
 import pyric
 import pyric.pyw as pyw
+import logging
 
 from . import adapters
 from . import scan
@@ -25,8 +26,7 @@ INTERFACE = 'wlan0'
 def hostapd_conf_as_config(filename):
     if filename == sys.stdin or os.path.exists(filename):
         return configobj.ConfigObj(filename)
-    click.echo("Warning: unable to load specific config file: %s" %
-               (filename,))
+    click.echo("Warning: unable to load specific config file: %s" % (filename,))
     return configobj.ConfigObj()
 
 
@@ -50,9 +50,15 @@ def get_current_interface(config):
         with open('/usr/local/connectbox/wificonf.txt') as f:
             data = f.read()
             f.close()
-            a = data.split("\n")
-            return(a[0])
+            a = data.split("\n")                            #Split the file into lines.  A[0] = AP A[1]=Client A[2]=######END####
+            click.echo("access point line is: %s" % (a[0],))
+            click.echo("client ine is: %s" % (a[1],))
+            a = a[0].split("IF=")                               #Access Point is first line with AccessPointIF=wlanX
+            click.echo("AP is: %s" % (a[1],))
+
+            return(a[1])
     except:
+        click.echo("Failure!! could not read the wificonf.txt file")
         return(INTERFACE)
 
 def get_current_channel(config):
@@ -164,6 +170,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     interface = get_current_interface(config)
 
     wifi_adapter = adapters.factory(interface)
+    logging.info("ssid is"+ssid+"interface is:"+str(interface)+"wifi adapter: "+str(wifi_adapter))
     # We deliberately only instantiate pyw.getcard for as small a set of
     #  parameters as possible because pyw gets sad if operations are
     #  attempted on a device that does not support nl80211 and we want to
@@ -192,7 +199,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
             country_code = scanned_cc
         else:
             click.echo("Could not do wifi scan. Using previous country code")
-
+        click.echo("Country code is: %s" % (country_code,))
     valid_channels_for_cc = scan.channels_for_country(country_code)
     if not channel:
         # Choose an uncontested channel, or a random one if there aren't any
@@ -222,7 +229,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
                     channel,
                     country_code,
                     ",".join([str(i) for i in valid_channels_for_cc])))
-
+    logging.info("AP channel is now: "+str(channel))
     file_loader = jinja2.PackageLoader('wifi_configurator')
     env = jinja2.Environment(
         loader=file_loader,
@@ -239,8 +246,18 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         wpa_passphrase=wpa_passphrase,
     )
     rendered.dump(output)
-    file_loader = jinja2.FileSystemLoader("/etc/wpa_supplicant/templates", encoding='utf-8', followlinks=False)
-    template = env.get_template('wpa_supplicant.conf.j2')
+# get the version of python so we can use it in a directory refernce
+    pipe = os.popen("/usr/bin/python --version").read()
+    click.echo("Output of the python version is: %s" % (pipe,))
+    vers = pipe.lower().split("python ")[1].split(".")
+    click.echo("python version: "+str(vers[0])+"."+str(vers[1]))
+    pipe = "python"+vers[0]+"."+vers[1]
+    pipe = "cp /etc/wpa_supplicant/wpa_supplicant.conf /usr/local/connectbox/wifi_configurator_venv/lib/"+pipe+"/site-packages/wifi_configurator/templates/"
+    click.echo("Final command is: %s" % (pipe,))
+    res = os.system( pipe )
+    if res < 0:
+       click.echo("FAILED !! could not copy wpa_supplicant.conf to the template directory")
+    template = env.get_template('wpa_supplicant.conf')
     rendered = template.stream(
         country=country_code)
     rendered.dump('/etc/wpa_supplicant/wpa_supplicant.conf')

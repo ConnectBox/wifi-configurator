@@ -2,7 +2,7 @@
 
 import os
 import configobj
-
+import logging
 
 class DefaultAdapter:
     ht_capab = ""
@@ -115,14 +115,18 @@ def factory(interface):
         return DefaultAdapter()
 
     config = configobj.ConfigObj(uevent_file)
+    logging.info("the config is:"+str(config)+" the uevent_file is: "+str(uevent_file))
     if config.get("SDIO_ID") == BCM4343x.SDIO_ID:
+        logging.info("we got BCM4343x")
         return BCM4343x()
 
     if config.get("PRODUCT") == Realtek5372.PRODUCT:
+        logging.info("we got Realtek 5372")
         return Realtek5372()
 
     if config.get("PRODUCT") in RTL8812AU.PRODUCT_list:
+        logging.info("we got RTL8812au")
         return RTL8812AU()
-
+    logging.info("We didn't match any device so we default")
     # Can't identify the adapter. Let's be conservative
     return DefaultAdapter()
