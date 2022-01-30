@@ -12,6 +12,7 @@ import jinja2
 import pyric
 import pyric.pyw as pyw
 import logging
+import time
 
 from . import adapters
 from . import scan
@@ -230,6 +231,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
                     country_code,
                     ",".join([str(i) for i in valid_channels_for_cc])))
     logging.info("AP channel is now: "+str(channel))
+    res = os.system( "systemctl stop hostapd")
     file_loader = jinja2.PackageLoader('wifi_configurator')
     env = jinja2.Environment(
         loader=file_loader,
@@ -246,6 +248,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         wpa_passphrase=wpa_passphrase,
     )
     rendered.dump(output)
+    res = os.system("systemctl stop wpa_supplicant")
 # get the version of python so we can use it in a directory refernce
     pipe = os.popen("/usr/bin/python --version").read()
     click.echo("Output of the python version is: %s" % (pipe,))
@@ -267,6 +270,9 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     # Related: https://github.com/ConnectBox/connectbox-pi/issues/220
     if sync and output != sys.stdout:
         subprocess.run("/bin/sync")
+    res = os.system("systemctl start wpa_supplicant")
+    res = os.system("systemctl start hostapd")
+    time.sleep(2)
     return 0
 
 
