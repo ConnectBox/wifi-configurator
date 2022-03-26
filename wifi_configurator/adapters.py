@@ -13,6 +13,32 @@ class DefaultAdapter:
         return "Default wifi adapter"
 
 
+class RTL8812BU:
+    """RTL 8812BU 802.11ac"""
+    PRODUCT_list = [
+        "bda/b812/0",
+        "bda/b82c/0",
+        "b05/1812/0",
+        "b05/B822/0"
+    ]
+    # iw list reports "Static SM Power Save" in capabilities for
+    #  this device, but hostapd is unable to start if SMPS-STATIC
+    #  is set. It's unclear why and thus we exclude it.
+    # Deliberately do not advertise 40Mhz channels even though they're
+    #  supported because we never want to use them given rapid
+    #  performance degradation under non-ideal conditions and the
+    #  difficulty of configuration across regulatory domains
+    # Note that RX-STBC1 is not available for 5GHz on this device
+    #  so we may need to remove it if we enable that band.
+    ht_capab = "[HT20][SHORT-GI-20][HT40-][HT40+][RX-STBC1][MAX-AMSDU-7935]"
+    # None of the vht_capab advertised by the hardware (iw list) are
+    #  supported (seemingly, by the driver)
+    vht_capab = ""
+    ac_active = 1
+
+    def __str__(self):
+        return "RTL 8812bu 802.11ac wifi adapter"
+
 class RTL8812AU:
     """RTL 8812AU 802.11ac"""
     PRODUCT_list = [
@@ -36,8 +62,8 @@ class RTL8812AU:
     ac_active = 1
 
     def __str__(self):
-        return "RTL 8812au 802.11ac wifi adapter"
-
+        return "RTL 8812au 802.11ac wifi adapter"    
+    
 
 class Realtek5372:
     """
