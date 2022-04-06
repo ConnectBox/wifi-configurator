@@ -53,7 +53,7 @@ def get_current_interface(config):
             f.close()
             a = data.split("\n")                            #Split the file into lines.  A[0] = AP A[1]=Client A[2]=######END####
             click.echo("access point line is: %s" % (a[0],))
-            click.echo("client ine is: %s" % (a[1],))
+            click.echo("client line is: %s" % (a[1],))
             a = a[0].split("IF=")                               #Access Point is first line with AccessPointIF=wlanX
             click.echo("AP is: %s" % (a[1],))
 
@@ -231,6 +231,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
                     country_code,
                     ",".join([str(i) for i in valid_channels_for_cc])))
     logging.info("AP channel is now: "+str(channel))
+    res = os.system( "ifdown "+interface)
     res = os.system( "systemctl stop hostapd")
     file_loader = jinja2.PackageLoader('wifi_configurator')
     env = jinja2.Environment(
@@ -272,7 +273,8 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         subprocess.run("/bin/sync")
     res = os.system("systemctl start wpa_supplicant")
     res = os.system("systemctl start hostapd")
-    time.sleep(2)
+    res = os.system("ifup "+interface)
+    time.sleep(4)
     return 0
 
 
