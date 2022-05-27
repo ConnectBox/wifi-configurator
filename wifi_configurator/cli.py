@@ -251,11 +251,8 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     rendered.dump(output)
     res = os.system("systemctl stop wpa_supplicant")
 # get the version of python so we can use it in a directory refernce
-    pipe = os.popen("/usr/bin/python --version").read()
-    click.echo("Output of the python version is: %s" % (pipe,))
-    vers = pipe.lower().split("python ")[1].split(".")
-    click.echo("python version: "+str(vers[0])+"."+str(vers[1]))
-    pipe = "python"+vers[0]+"."+vers[1]
+    pipe = os.popen("ls /usr/local/connectbox/wifi_configurator_venv/lib").read()
+    pipe = pipe.strip('\n')
     pipe = "cp /etc/wpa_supplicant/wpa_supplicant.conf /usr/local/connectbox/wifi_configurator_venv/lib/"+pipe+"/site-packages/wifi_configurator/templates/"
     click.echo("Final command is: %s" % (pipe,))
     res = os.system( pipe )
