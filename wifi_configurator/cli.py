@@ -171,7 +171,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     interface = get_current_interface(config)
 
     wifi_adapter = adapters.factory(interface)
-    logging.info("ssid is"+ssid+"interface is:"+str(interface)+"wifi adapter: "+str(wifi_adapter))
+    logging.info("ssid is"+str(ssid)+"interface is:"+str(interface)+"wifi adapter: "+str(wifi_adapter))
     # We deliberately only instantiate pyw.getcard for as small a set of
     #  parameters as possible because pyw gets sad if operations are
     #  attempted on a device that does not support nl80211 and we want to
