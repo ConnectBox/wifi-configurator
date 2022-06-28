@@ -180,6 +180,10 @@ def factory(interface):
     if config.get("PRODUCT") in RTL8812BU.PRODUCT_list:
         logging.info("we got RTL8812bu")
         return RTL8812BU()
+
+    if config.get("PRODUCT") in RTL8812CU.PRODUCT_list:
+        logging.info("we got RTL8812cu")
+        return RTL8812CU()
         
     logging.info("We didn't match any device so we default")
     # Can't identify the adapter. Let's be conservative
