@@ -209,19 +209,14 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         channel = scan.get_available_uncontested_channel(
             valid_channels_for_cc, scan_output
         )
-        if not channel:
+        if (not channel and len(valid_channels_for_cc) > 0):
             channel = random.choice(valid_channels_for_cc)
             click.echo("No uncontested channels. Choosing %s at random" %
                        (channel,))
         else:
             click.echo("Channel %s is uncontested and is now the new channel" %
                        (channel,))
-        channel = get_current_channel(config)
-        if channel not in valid_channels_for_cc:
-            click.echo("Channel %s is not valid for new country code %s. "
-                       "Setting channel to %s" % (channel, country_code,
-                                                  valid_channels_for_cc[0]))
-            channel = valid_channels_for_cc[0]
+           
     else:
         if channel not in valid_channels_for_cc:
             raise click.BadParameter(

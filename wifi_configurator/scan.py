@@ -3,7 +3,7 @@ import functools
 from pathlib import Path
 import subprocess
 import re
-
+import time
 import click
 import configobj
 import pyric.pyw as pyw
@@ -69,14 +69,19 @@ def get_scan_output(wlan_if):
     with ActiveWifiInterface(wlan_if) as awi:
         if not awi:
             return ""
-
-        iw = subprocess.run([
-            "/sbin/iw",
-            "dev",
-            wlan_if.dev,
-            "scan"
-        ], stdout=subprocess.PIPE)
-        return iw.stdout.decode("utf-8")
+        a = ""
+        b = 0
+        while a == "" and b < 5
+            iw = subprocess.run([
+                "/sbin/iw",
+                "dev",
+                wlan_if.dev,
+                "scan"
+            ], stdout=subprocess.PIPE)
+            a = iw.stdout.decode("utf-8") 
+            b += 1
+            if a == "": time.sleep(2)
+    return a
 
 
 def get_freq_signal_tuples_from_iw_output(iw_output):
@@ -177,7 +182,7 @@ def get_country_rules_block(country_code, lines):
                 # We're at the end of the country block
                 return country_lines
 
-        if not line.startswith("country %s:" % (country_code,)):
+        if not line.find("country %s:" % (country_code,)):
             continue
 
         in_country_block = True
