@@ -71,7 +71,7 @@ def get_scan_output(wlan_if):
             return ""
         a = ""
         b = 0
-        while a == "" and b < 5
+        while a == "" and b < 5:
             iw = subprocess.run([
                 "/sbin/iw",
                 "dev",
