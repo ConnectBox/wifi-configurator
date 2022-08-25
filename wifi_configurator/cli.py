@@ -198,7 +198,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         scanned_cc = scan.detect_regdomain(scan_output)
         # Only use the scanned cc if it's non-empty
         if scanned_cc[0]:
-            country_code = scanned_cc
+            country_code = scanned_cc[0]
             loggin.info("Wificonfig: scanned country code is: "+country_code)   
         else:
             click.echo("Could not do wifi scan. Using previous country code")
