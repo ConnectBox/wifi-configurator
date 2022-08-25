@@ -171,7 +171,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     interface = get_current_interface(config)
 
     wifi_adapter = adapters.factory(interface)
-    logging.info("Wificonfig: ssid is"+str(ssid)+"interface is:"+str(interface)+"wifi adapter: "+str(wifi_adapter))
+    logging.info("ssid is"+str(ssid)+"interface is:"+str(interface)+"wifi adapter: "+str(wifi_adapter))
     # We deliberately only instantiate pyw.getcard for as small a set of
     #  parameters as possible because pyw gets sad if operations are
     #  attempted on a device that does not support nl80211 and we want to
@@ -193,18 +193,14 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
 
     # Retrieve the previous cc now, given we have so many fallback cases
     country_code = get_current_country_code(config)
-    logging.info("Wificonfig: country ccode retrieved is: "+country_code)
     if set_country_code:
         scanned_cc = scan.detect_regdomain(scan_output)
         # Only use the scanned cc if it's non-empty
         if scanned_cc[0]:
             country_code = scanned_cc[0]
-            loggin.info("Wificonfig: scanned country code is: "+country_code)   
         else:
             click.echo("Could not do wifi scan. Using previous country code")
-            logging.info("Wificonfig: could not scan so using old code: "country_code)
         click.echo("Country code is: %s" % (country_code,))
-
     valid_channels_for_cc = scan.channels_for_country(country_code)
     if not channel:
         # Choose an uncontested channel, or a random one if there aren't any
@@ -232,7 +228,6 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     logging.info("AP channel is now: "+str(channel))
     res = os.system( "ifdown "+interface)
     res = os.system( "systemctl stop hostapd")
-    logging.info("Wificonfig: getting ready to write the file using country code: "+country_code)
     file_loader = jinja2.PackageLoader('wifi_configurator')
     env = jinja2.Environment(
         loader=file_loader,
@@ -249,13 +244,11 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
         wpa_passphrase=wpa_passphrase,
     )
     rendered.dump(output)
-    logging.info("Wificonfig: just wrote the file wit country code: "+country_code)
     res = os.system("systemctl stop wpa_supplicant")
 # get the version of python so we can use it in a directory refernce
     pipe = os.popen("ls /usr/local/connectbox/wifi_configurator_venv/lib").read()
     pipe = pipe.strip('\n')
     pipe = "cp /etc/wpa_supplicant/wpa_supplicant.conf /usr/local/connectbox/wifi_configurator_venv/lib/"+pipe+"/site-packages/wifi_configurator/templates/"
-    logging.info("Wificonfig: just copied the file over to the temp directory")
     click.echo("Final command is: %s" % (pipe,))
     res = os.system( pipe )
     if res < 0:
@@ -263,7 +256,6 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     template = env.get_template('wpa_supplicant.conf')
     rendered = template.stream(
         country=country_code)
-    logging.info("Wificonfig: ok just wrote the /etc/wpa_supplicant/wpa_supplicant.conf file:"+country_code)
     rendered.dump('/etc/wpa_supplicant/wpa_supplicant.conf')
     # Some filesystems don't write to disk for a while, which can lead to
     #  corruption in files. A corrupt hostapd.conf may well brick a device
