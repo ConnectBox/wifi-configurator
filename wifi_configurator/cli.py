@@ -266,6 +266,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     res = os.system("systemctl start wpa_supplicant")
     res = os.system("systemctl start hostapd")
     res = os.system("ifup "+interface)
+    res = os.system("systemctl restart hostapd")
     time.sleep(4)
     return 0
 
