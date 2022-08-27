@@ -267,6 +267,7 @@ def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
     res = os.system("systemctl start hostapd")
     res = os.system("ifup "+interface)
     res = os.system("systemctl restart hostapd")
+    res = os.system("systemctl restart dnsmasq")
     time.sleep(4)
     return 0
 
