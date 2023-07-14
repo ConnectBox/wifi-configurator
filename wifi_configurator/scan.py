@@ -8,6 +8,7 @@ import click
 import configobj
 import pyric.pyw as pyw
 import pyric.utils.channels as channels
+import pprint
 
 # OFDM. We don't use DSSS, so their 22MHz width doesn't matter
 CHANNEL_WIDTH_MHZ_24 = 20
@@ -131,8 +132,10 @@ def channel_overlaps_with_others(channel, channel_list):
     freq_range = set(range(
         channels.ISM_24_C2F[channel] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
         channels.ISM_24_C2F[channel] + (CHANNEL_WIDTH_MHZ_24 // 2)
+
     ))
     for item in channel_list:
+
         item_freq_range = set(range(
             channels.ISM_24_C2F[item] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
             channels.ISM_24_C2F[item] + (CHANNEL_WIDTH_MHZ_24 // 2)
@@ -167,7 +170,6 @@ def detect_regdomain(scan_output):
     regdomain = c.get("REGDOMAIN", "")
     if regdomain:
         return regdomain
-
     return get_consensus_regdomain_from_iw_output(scan_output)
 
 
@@ -178,20 +180,19 @@ def get_country_rules_block(country_code, lines):
         if in_country_block:
             if line.strip():
                 country_lines.append(line)
+                continue
             else:
                 # We're at the end of the country block
                 return country_lines
-
-        if not line.find("country %s:" % (country_code,)):
+        elif (not (line.find(country_code) >=0)):
             continue
-
         in_country_block = True
         country_lines.append(line)
-
+        continue
     return country_lines
 
 
-def get_frequency_blocks_from_country_block(lines):
+def get_frequency_blocks_from_country_block(country_code, lines):
     freqency_blocks = []
     block_lower_point = 0
     block_upper_point = 0
@@ -213,7 +214,7 @@ def get_frequency_blocks_from_country_block(lines):
         #  speaking it could be many lines of overlap, but let's ignore that
         #  given there's only 00 and JP with NO-OFDM and that doesn't go back
         #  more than one line.
-        if "NO-OFDM" in line:
+        if ("NO-OFDM" in line):
             # If the NO-OFDM line encroaches on the top end of the previous
             #  block, redefine the top of the previous block to be where the
             #  NO-OFDM block starts
@@ -231,6 +232,8 @@ def get_frequency_blocks_from_country_block(lines):
 
     if block_lower_point and block_upper_point:
         freqency_blocks.append((block_lower_point, block_upper_point))
+    click.echo("Frequency blocks are {}" )
+    pprint.pprint(freqency_blocks)
     return freqency_blocks
 
 
@@ -258,6 +261,7 @@ def flatten_frequency_blocks(blocks):
                 block_upper_point = end
 
     # flush the last oneO
+
     flattened_blocks.append((block_lower_point, block_upper_point))
     return flattened_blocks
 
@@ -278,6 +282,6 @@ def channels_for_country(country_code):
                              stdout=subprocess.PIPE)
     lines = regdump.stdout.decode('utf-8').split("\n")
     country_rules_block = get_country_rules_block(country_code, lines)
-    frequency_blocks = get_frequency_blocks_from_country_block(country_rules_block)
+    frequency_blocks = get_frequency_blocks_from_country_block(country_code, country_rules_block)
     frequency_blocks = flatten_frequency_blocks(frequency_blocks)
     return get_channel_list_from_frequency_blocks(frequency_blocks)
