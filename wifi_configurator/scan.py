@@ -9,6 +9,8 @@ import configobj
 import pyric.pyw as pyw
 import pyric.utils.channels as channels
 import pprint
+import random
+
 
 # OFDM. We don't use DSSS, so their 22MHz width doesn't matter
 CHANNEL_WIDTH_MHZ_24 = 20
@@ -126,24 +128,16 @@ def get_max_signal_at_each_freq(freq_signal_tuples):
             freq_signal_map[freq] = signal
 
 
-def channel_overlaps_with_others(channel, channel_list):
-    # we don't care about overlaps at endpoints, so add 1 to the base
-    # (range strips the top value anyway)
-    freq_range = set(range(
-        channels.ISM_24_C2F[channel] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
-        channels.ISM_24_C2F[channel] + (CHANNEL_WIDTH_MHZ_24 // 2)
-
-    ))
-    for item in channel_list:
-
-        item_freq_range = set(range(
-            channels.ISM_24_C2F[item] - (CHANNEL_WIDTH_MHZ_24 // 2) + 1,
-            channels.ISM_24_C2F[item] + (CHANNEL_WIDTH_MHZ_24 // 2)
-        ))
-        if freq_range.intersection(item_freq_range):
-            return True
-
-    return False
+def channel_overlaps_with_others(all_channel, channel_list):
+    for channel in channel_list:
+        x = 0
+        for x in range (0, len(all_channel)):
+            if all_channel[x] == channel:
+                all_channel.pop(x)
+    if len(all_channel) == 0:
+        return NO_CHANNEL
+    else:
+        return (random.choice(all_channel))
 
 
 def get_available_uncontested_channel(all_available_channels, scan_output):
@@ -156,12 +150,9 @@ def get_available_uncontested_channel(all_available_channels, scan_output):
                (",".join([str(c) for c in all_available_channels])))
     click.echo("Used channels are: %s" %
                (",".join([str(c) for c in used_channels])))
-    for channel in all_available_channels:
-        if not channel_overlaps_with_others(channel, used_channels):
-            return channel
-
-    return NO_CHANNEL
-
+    channel = channel_overlaps_with_others(all_available_channels, used_channels)
+    click.echo("slected channel is: %s" % channel)
+    return channel
 
 def detect_regdomain(scan_output):
     crda_config = Path("/etc/default/crda")
@@ -171,7 +162,6 @@ def detect_regdomain(scan_output):
     if regdomain:
         return regdomain
     return get_consensus_regdomain_from_iw_output(scan_output)
-
 
 def get_country_rules_block(country_code, lines):
     in_country_block = False
