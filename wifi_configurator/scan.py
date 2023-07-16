@@ -131,9 +131,15 @@ def get_max_signal_at_each_freq(freq_signal_tuples):
 def channel_overlaps_with_others(all_channel, channel_list):
     for channel in channel_list:
         x = 0
-        for x in range (0, len(all_channel)):
+        y = len(all_channel)
+        while (x < y):
             if all_channel[x] == channel:
                 all_channel.pop(x)
+                y -= 1
+                x = y
+            else:
+                x += 1
+
     if len(all_channel) == 0:
         return NO_CHANNEL
     else:
