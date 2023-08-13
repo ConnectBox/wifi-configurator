@@ -107,7 +107,8 @@ class MT7601:
     """
     Media Teck 7601U (external USB shipped with Neo Connectbox for Client Side)
     """
-    PRODUCT = "148f/7601/100"
+    PRODUCT = "148f/7601/0",
+              "148f/2878/0"
     #Media Teck (external USB shipped with NEO Connectbox)
     WirelessMode = 5
     # Set Wireless Mode to 11ABGN mixed
@@ -184,6 +185,10 @@ def factory(interface):
     if config.get("PRODUCT") in RTL8812CU.PRODUCT_list:
         logging.info("we got RTL8812cu")
         return RTL8812CU()
+        
+    if config.get("PRODUCT") in MT7601.PRODUCT_list:
+        logging.info("we got MT7601")
+        return MT7601()
         
     logging.info("We didn't match any device so we default")
     # Can't identify the adapter. Let's be conservative
