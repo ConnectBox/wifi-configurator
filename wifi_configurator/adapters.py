@@ -92,7 +92,9 @@ class Realtek5372:
     """
     Realtek 5372 (external USB shipped with Neo Connectbox)
     """
-    PRODUCT = "148f/5372/101"
+    PRODUCT_list = [
+        "148f/5372/101"
+    ]
     # Realtek 5372 (external USB shipped with Neo Connectbox)dd
     # Deliberately do not advertise 40Mhz channels even though they're
     #  supported because we never want to use them given rapid
@@ -107,8 +109,10 @@ class MT7601:
     """
     Media Teck 7601U (external USB shipped with Neo Connectbox for Client Side)
     """
-    PRODUCT = "148f/7601/0",
-              "148f/2878/0"
+    PRODUCT_list = [
+        "148f/7601/0",
+        "148f/2878/0"
+    ]          
     #Media Teck (external USB shipped with NEO Connectbox)
     WirelessMode = 5
     # Set Wireless Mode to 11ABGN mixed
@@ -170,7 +174,7 @@ def factory(interface):
         logging.info("we got BCM4343x")
         return BCM4343x()
 
-    if config.get("PRODUCT") == Realtek5372.PRODUCT:
+    if config.get("PRODUCT") == Realtek5372.PRODUCT_list:
         logging.info("we got Realtek 5372")
         return Realtek5372()
 
