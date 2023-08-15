@@ -5,7 +5,7 @@ import configobj
 import logging
 
 class DefaultAdapter:
-    ht_capab = ""
+    ht_capab = "[HT20][SHORT-GI-20]"
     vht_capab = ""
     ac_active = 0
 
