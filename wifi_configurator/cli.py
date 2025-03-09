@@ -37,7 +37,7 @@ def hostapd_conf_as_config(filename):
 def get_current_ssid(config):
 # Using a dictionary and json to store Branding stuff
 # Read the dictionary
-  with open('/usr/local/connectbox/brand.txt') as f:
+  with open('/usr/local/connectbox/brand.j2') as f:
     data = f.read()
     f.close()
     js = json.loads(data)
