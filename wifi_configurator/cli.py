@@ -14,14 +14,15 @@ import pyric.pyw as pyw
 import logging
 import time
 
-from . import adapters
-from . import scan
 
 
 SYSLOG_TAG = "wifi-configurator"
 DEFAULT_SSID = " - Free Media"
 DEFAULT_CHANNEL = "7"
 INTERFACE = 'wlan0'
+
+
+
 
 @functools.lru_cache()
 def hostapd_conf_as_config(filename):
@@ -158,9 +159,15 @@ def cb_handle_output(ctx, _, value):
 @click.option('--sync/--no-sync',
               default=True,
               help="Performs a filesystem sync after writing changes")
+
 # pylint: disable=too-many-arguments,too-many-locals
 def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
          set_country_code):
+    sys.path.append('/usr/local/connectbox/wifi_configurator_venv/lib/python3.9/site-packages/wifi_configurator')
+    import adapters
+    import scan
+
+
     """Console script for wifi_configurator."""
     config = hostapd_conf_as_config(filename)
     # Could use a callback and access filename parameter in the decorator,
