@@ -35,15 +35,28 @@ def hostapd_conf_as_config(filename):
 # The following get_current_... methods are crafted to take steps to recover
 #  from a busted config file by defaulting to values that will allow hostapd
 #  to start
+
 def get_current_ssid(config):
+
 # Using a dictionary and json to store Branding stuff
+# Set a fallback name in case the file is 'busted'
+  brand_name = "ConnectBox"
+
 # Read the dictionary
-  with open('/usr/local/connectbox/brand.j2') as f:
-    data = f.read()
-    f.close()
-    js = json.loads(data)
-    brand_name = js["Brand"]
-  return config.get("ssid", (brand_name + DEFAULT_SSID))
+  try:
+    with open('/usr/local/connectbox/brand.j2') as f:
+      try:
+          data = f.read()
+          f.close()
+          js = json.loads(data)
+          brand_name = js["Brand"]
+      except (FileNotFoundError, json.JSONDecoderError, KeyError) as e:
+          Logging.warning(f"Config busted or missing: {e}, Using fallback  ")
+    return (brand_name + DEFAULT_SSID)
+  except (FileNotFoundError) as e:
+    Logging.warning(f"Config file missing: {e}, using fallback ")
+    return ("ConnectBox" + DEFAULT_SSID)
+
 
 def get_current_interface(config):
 # Since we now have in the neo_battery_shutdown a wifi channel identifier
