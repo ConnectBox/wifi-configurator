@@ -26,6 +26,26 @@ INTERFACE = 'wlan0'
 
 @functools.lru_cache()
 def hostapd_conf_as_config(filename):
+    """Load and cache a hostapd.conf file as a ConfigObj dict.
+
+    Uses lru_cache so that multiple get_current_*() calls and the main()
+    function all share the same parsed object without re-reading the file.
+
+    Accepts '-' (stdin) as a special value so the tool can be driven from
+    a pipe during testing.  Falls back to an empty ConfigObj if the file
+    does not exist, allowing individual get_current_*() calls to return
+    their built-in defaults.
+
+    Parameters
+    ----------
+    filename : str or file
+        Path to hostapd.conf, or sys.stdin if '-' was passed on the CLI.
+
+    Returns
+    -------
+    configobj.ConfigObj
+        Parsed configuration, or an empty ConfigObj on missing file.
+    """
     if filename == sys.stdin or os.path.exists(filename):
         return configobj.ConfigObj(filename)
     click.echo("Warning: unable to load specific config file: %s" % (filename,))
@@ -37,7 +57,25 @@ def hostapd_conf_as_config(filename):
 #  to start
 
 def get_current_ssid(config):
+    """Return the SSID to broadcast, derived from the brand name in brand.j2.
 
+    Reads the 'Brand' key from /usr/local/connectbox/brand.j2 (JSON) and
+    appends DEFAULT_SSID (' - Free Media') to form the full SSID string.
+    Falls back to 'ConnectBox - Free Media' if the file is missing, empty,
+    or contains invalid JSON — so hostapd can always start even on a partially
+    provisioned device.
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+        Parsed hostapd.conf (not currently used; kept for API symmetry with
+        other get_current_* functions).
+
+    Returns
+    -------
+    str
+        Full SSID string, e.g. 'MyOrg - Free Media'.
+    """
 # Using a dictionary and json to store Branding stuff
 # Set a fallback name in case the file is 'busted'
   brand_name = "ConnectBox"
@@ -59,6 +97,26 @@ def get_current_ssid(config):
 
 
 def get_current_interface(config):
+    """Return the WiFi interface name to use for the access point.
+
+    Reads /usr/local/connectbox/wificonf.txt which is written by the
+    neo_batterylevelshutdown service after it detects and assigns WiFi
+    interfaces.  The file format is line-delimited with the AP interface
+    on line 0 and the client interface on line 1, each in 'IF=wlanX' format.
+
+    Falls back to the module-level INTERFACE constant ('wlan0') if the file
+    cannot be read, so the AP can start even without HAT service running.
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+        Parsed hostapd.conf (not currently used).
+
+    Returns
+    -------
+    str
+        Interface name, e.g. 'wlan0' or 'wlan1'.
+    """
 # Since we now have in the neo_battery_shutdown a wifi channel identifier
 # we want to use the listed interface for our configuration
     try:
@@ -77,27 +135,120 @@ def get_current_interface(config):
         return(INTERFACE)
 
 def get_current_channel(config):
+    """Return the current hostapd channel, defaulting to DEFAULT_CHANNEL ('7').
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+        Parsed hostapd.conf.
+
+    Returns
+    -------
+    int
+        Channel number.
+    """
     return int(config.get("channel", DEFAULT_CHANNEL))
 
 
 def get_current_ht_capab(config):
+    """Return the current HT capabilities string from hostapd.conf.
+
+    Returns an empty string if not set, which is safe — hostapd will start
+    with basic HT20 support when ht_capab is absent.
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+
+    Returns
+    -------
+    str
+        hostapd ht_capab value, e.g. '[HT20][SHORT-GI-20]'.
+    """
     return config.get("ht_capab", "")
 
 
 def get_current_country_code(config):
+    """Return the country_code currently set in hostapd.conf.
+
+    Returns an empty string if not set.  An empty country code is valid for
+    hostapd but suppresses regulatory-domain enforcement.
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+
+    Returns
+    -------
+    str
+        Two-letter ISO country code or ''.
+    """
     return config.get("country_code", "")
 
 def get_current_ac_mode(config):
+    """Return the ieee80211ac flag from hostapd.conf (0 = disabled, 1 = enabled).
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+
+    Returns
+    -------
+    str
+        '0' or '1'.
+    """
     return config.get("ieee80211ac", "0")
 
 
 def get_current_wpa_passphrase(config):
+    """Return the WPA passphrase from hostapd.conf, or '' if none is set.
+
+    An empty string signals that the AP should run open (no password), which
+    is the ConnectBox default.  None is never returned so callers can do
+    simple truthiness checks without handling None separately.
+
+    Parameters
+    ----------
+    config : configobj.ConfigObj
+
+    Returns
+    -------
+    str
+        WPA passphrase (8-63 chars) or '' for an open AP.
+    """
     # If it's not set, then pass back an empty string and we can follow
     #  the logic as if we're turning off password protection
     return config.get("wpa_passphrase", "")
 
 
 def cb_handle_wpa_passphrase(ctx, _, value):
+    """Click callback that validates and normalises the --wpa-passphrase option.
+
+    Three distinct cases must be handled:
+    - None (option not given): re-use the passphrase already in hostapd.conf.
+    - '' (empty string): disable WPA and make the AP open — valid and intentional.
+    - Non-empty string: validate WPA length (8-63 chars) and return as-is.
+
+    A simple equality check cannot distinguish None from '' here, which is why
+    this explicit three-way check is needed rather than a default= on the option.
+
+    Parameters
+    ----------
+    ctx : click.Context
+    _ : click.Option (unused)
+    value : str or None
+        Raw CLI value for --wpa-passphrase.
+
+    Returns
+    -------
+    str
+        Validated passphrase, '' for open AP, or re-used existing value.
+
+    Raises
+    ------
+    click.BadParameter
+        If value is a non-empty string shorter than 8 or longer than 63 chars.
+    """
     # IF the passphrase is None, re-use whatever is already in config
     # We can't do a basic equality check here, because an empty string is
     #  used to disable password protection, and that's different to not
@@ -118,6 +269,24 @@ def cb_handle_wpa_passphrase(ctx, _, value):
 
 
 def cb_handle_filename(_, _2, value):
+    """Click callback that translates the '-' filename shorthand to sys.stdin.
+
+    Allows the tool to be used in a pipe: `cat hostapd.conf | wifi-configurator -f -`
+    The resulting sys.stdin value is detected by hostapd_conf_as_config() and
+    cb_handle_output() to handle stdin/stdout pairing correctly.
+
+    Parameters
+    ----------
+    _ : click.Context (unused)
+    _2 : click.Option (unused)
+    value : str
+        Raw CLI value for -f/--filename.
+
+    Returns
+    -------
+    str or file
+        sys.stdin if value is '-', otherwise the raw path string.
+    """
     if value == "-":
         return sys.stdin
 
@@ -125,6 +294,26 @@ def cb_handle_filename(_, _2, value):
 
 
 def cb_handle_output(ctx, _, value):
+    """Click callback that resolves the -o/--output destination.
+
+    Default behaviour (no -o given) is to write back to the same file that was
+    read, so a plain invocation updates hostapd.conf in place.  When the input
+    came from stdin, the output defaults to stdout so the tool can participate
+    in a pipeline.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Used to retrieve the already-resolved 'filename' parameter.
+    _ : click.Option (unused)
+    value : str or None
+        Raw CLI value for -o/--output.
+
+    Returns
+    -------
+    str or file
+        Resolved output destination: a file path, sys.stdout, or the input filename.
+    """
     if not value:
         if ctx.params["filename"] == sys.stdin:
             return sys.stdout
@@ -176,12 +365,31 @@ def cb_handle_output(ctx, _, value):
 # pylint: disable=too-many-arguments,too-many-locals
 def main(filename, interface, ssid, channel, output, wpa_passphrase, sync,
          set_country_code):
+    """Generate a hostapd.conf for the ConnectBox WiFi access point.
+
+    This is the primary entry point for the wifi-configurator CLI.  It reads
+    the existing hostapd.conf, fills in any unspecified values from the running
+    config or auto-detection, renders a new hostapd.conf via Jinja2, and
+    restarts the relevant services so changes take effect immediately.
+
+    Processing sequence:
+    1. Load existing hostapd.conf to provide defaults for any options not
+       specified on the command line.
+    2. Identify the WiFi adapter via adapters.factory() so the correct
+       ht_capab/vht_capab flags are written into the template.
+    3. If --set-country-code or no channel given, run 'iw dev scan' to detect
+       the regulatory domain and find an uncontested channel.
+    4. Validate the channel against the legal channel list for the country.
+    5. Render hostapd.conf and wpa_supplicant.conf from Jinja2 templates.
+    6. Optionally sync the filesystem to prevent corruption on power loss.
+    7. Restart hostapd, wpa_supplicant, and dnsmasq so changes are live.
+
+    Parameters are supplied by Click from the decorated options above.
+    """
     sys.path.append('/usr/local/connectbox/wifi_configurator_venv/lib/python3.9/site-packages/wifi_configurator')
     import adapters
     import scan
 
-
-    """Console script for wifi_configurator."""
     config = hostapd_conf_as_config(filename)
     # Could use a callback and access filename parameter in the decorator,
     #  (filename possibly needs is_eager) or by subclassing click.Option

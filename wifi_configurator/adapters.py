@@ -5,6 +5,13 @@ import configobj
 import logging
 
 class DefaultAdapter:
+    """Conservative fallback adapter used when the chipset cannot be identified.
+
+    Returned by factory() when /sys/class/net/<if>/device/uevent is absent or
+    contains a PRODUCT/SDIO_ID that does not match any known entry.  Advertises
+    only HT20 + SHORT-GI-20 so hostapd can always start, even if capabilities
+    are under-reported relative to the actual hardware.
+    """
     ht_capab = "[HT20][SHORT-GI-20]"
     vht_capab = ""
     ac_active = 0
@@ -159,6 +166,31 @@ class BCM43455:
 
 
 def factory(interface):
+    """Return the adapter object that matches the WiFi chipset on the given interface.
+
+    Reads /sys/class/net/<interface>/device/uevent, which the kernel populates
+    with the USB PRODUCT string (vendor/product/version) or SDIO_ID for SDIO
+    devices.  Each known adapter class carries a PRODUCT_list or SDIO_ID class
+    attribute used for matching.
+
+    The returned object exposes ht_capab, vht_capab, and ac_active attributes
+    that cli.py passes into the hostapd.conf Jinja2 template so the AP
+    advertises the correct 802.11n/ac capabilities for the actual hardware.
+
+    Falls back to DefaultAdapter() in two cases:
+    - The uevent file does not exist (interface is not a USB/SDIO device).
+    - The PRODUCT/SDIO_ID does not match any known chipset.
+
+    Parameters
+    ----------
+    interface : str
+        Network interface name, e.g. 'wlan0' or 'wlan1'.
+
+    Returns
+    -------
+    One of: RTL8812BU, RTL8812AU, RTL8812CU, Realtek5372, MT7601,
+            BCM4343x, BCM43455, DefaultAdapter
+    """
     uevent_file = os.path.join(
         "/sys/class/net",
         interface,
@@ -168,12 +200,16 @@ def factory(interface):
         # Be conservative... we can't be sure what's going on
         return DefaultAdapter()
 
+    # Parse the uevent file as a key=value config (configobj handles the format).
     config = configobj.ConfigObj(uevent_file)
     logging.info("the config is:"+str(config)+" the uevent_file is: "+str(uevent_file))
+
+    # SDIO devices (RPi built-in BCM) identify by SDIO_ID rather than PRODUCT.
     if config.get("SDIO_ID") == BCM4343x.SDIO_ID:
         logging.info("we got BCM4343x")
         return BCM4343x()
 
+    # USB adapters identify by PRODUCT in 'vendor/product/version' format.
     if config.get("PRODUCT") == Realtek5372.PRODUCT_list:
         logging.info("we got Realtek 5372")
         return Realtek5372()
@@ -189,11 +225,11 @@ def factory(interface):
     if config.get("PRODUCT") in RTL8812CU.PRODUCT_list:
         logging.info("we got RTL8812cu")
         return RTL8812CU()
-        
+
     if config.get("PRODUCT") in MT7601.PRODUCT_list:
         logging.info("we got MT7601")
         return MT7601()
-        
+
     logging.info("We didn't match any device so we default")
     # Can't identify the adapter. Let's be conservative
     return DefaultAdapter()
